@@ -1,0 +1,12 @@
+# Réglages locaux de l'éditeur / de Claude Code
+.claude/
+
+# Vercel (pour plus tard) et variables secrètes
+.vercel/
+.env
+.env.*
+
+# Divers
+node_modules/
+.DS_Store
+Thumbs.db
