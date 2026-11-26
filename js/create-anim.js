@@ -5,7 +5,7 @@
 const CreateAnim = (() => {
   const DURATION = 3000;
   const MAX_CHIPS = 16; // au-delà, une pastille « +N »
-  const COLORS = ['#A0228F', '#1E9FAB', '#FFB81C', '#D95BC6', '#4FD1D6', '#FFE14D'];
+  const COLORS = ['#E21FA0', '#7B3FF2', '#00B4D8', '#FFB81C', '#FF3D6E', '#6BCB00', '#2F6BFF', '#FF7A1A'];
   let root = null;
   let timer = 0;
 

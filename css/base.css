@@ -1,0 +1,346 @@
+/* ==========================================================
+   NexCup — Base : couleurs, typographie, fond animé, mise en page
+   Identité du logo (magenta · turquoise · éclair doré) élargie en palette « festival » :
+   magenta, rose, violet, bleu, cyan, turquoise, citron vert, or, orange, corail.
+   Autres feuilles : components.css (éléments de l'interface), motion.css (animations),
+   scenes.css (animations plein écran : guide, création, victoire).
+   ========================================================== */
+
+/* Unité des animations plein écran (création, victoire, cinématiques du guide).
+   1vmin sur ordinateur ; sur un téléphone en hauteur, on l'agrandit en restant sous la hauteur de l'écran. */
+:root { --u: 1vmin; }
+@media (orientation: portrait) and (max-width: 760px) {
+  :root { --u: min(1.7vmin, .85vh); }
+}
+
+/* L'angle de la bordure arc-en-ciel animée (tableau, prochain match en cours) */
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+
+:root {
+  /* ---------- Palette festival (thème clair) ---------- */
+  --c-magenta: #E21FA0;
+  --c-pink: #FF4FBF;
+  --c-violet: #7B3FF2;
+  --c-blue: #2F6BFF;
+  --c-cyan: #00B4D8;
+  --c-turquoise: #12B5B0;
+  --c-green: #16A34A;
+  --c-lime: #6BCB00;
+  --c-gold: #FFB81C;
+  --c-orange: #FF7A1A;
+  --c-coral: #FF3D6E;
+
+  --grad-brand: linear-gradient(120deg, var(--c-magenta) 0%, var(--c-violet) 48%, var(--c-cyan) 100%);
+  --grad-hot: linear-gradient(120deg, var(--c-coral), var(--c-orange) 55%, var(--c-gold));
+  --grad-cool: linear-gradient(120deg, var(--c-blue), var(--c-cyan) 55%, var(--c-turquoise));
+  --grad-gold: linear-gradient(120deg, #FFE27A, var(--c-gold) 50%, var(--c-orange));
+  --grad-rainbow: linear-gradient(90deg, var(--c-magenta), var(--c-violet), var(--c-blue), var(--c-cyan), var(--c-lime), var(--c-gold), var(--c-orange), var(--c-coral), var(--c-magenta));
+  --grad-cta: linear-gradient(120deg, var(--c-magenta), var(--c-violet) 30%, var(--c-blue) 60%, var(--c-cyan) 85%, var(--c-magenta));
+  --brand-gradient: var(--grad-brand);
+
+  /* ---------- Surfaces ---------- */
+  --bg: #FAF6FF;
+  --bg-2: #EFE6FF;
+  --surface: rgba(255, 255, 255, .8);
+  --surface-solid: #FFFFFF;
+  --surface-2: #F7F2FF;
+  --ink: #1B1036;
+  --muted: #625A7E;
+  --border: rgba(91, 52, 168, .13);
+  --border-strong: rgba(91, 52, 168, .24);
+  --pill: #EFE7FC;
+  --shadow-sm: 0 1px 2px rgba(60, 20, 120, .06), 0 2px 8px rgba(60, 20, 120, .06);
+  --shadow: 0 14px 34px -12px rgba(70, 25, 140, .22), 0 2px 6px rgba(70, 25, 140, .06);
+  --shadow-lg: 0 34px 80px -20px rgba(60, 20, 130, .4);
+  --glass: blur(16px) saturate(1.6);
+
+  /* ---------- Rôles ---------- */
+  --accent: #C0168C;
+  --accent-2: #0E9BB0;
+  --accent-soft: #FCE4F4;
+  --accent-ink: #9A0F70;
+  --gold: #FFB81C;
+  --danger: #E0264F;
+  --danger-soft: #FFE3EA;
+  --danger-border: #F7B9C8;
+  --done-bg: #DFF7E5;
+  --done-ink: #157A33;
+  --done-border: #B2E6BF;
+  --live-bg: #FFE2EA;
+  --live-ink: #D0174E;
+  --up-bg: #ECE4FF;
+  --up-ink: #5626D0;
+  --on-ink: #FFFFFF;
+  --chip-ink: #FFFFFF;
+  --gold-bg: linear-gradient(135deg, #FFF3D1, #FFE1F2 55%, #D9F6FA);
+  --gold-border: #F3D38A;
+  --podium-step: rgba(255, 255, 255, .7);
+  --dot: rgba(91, 52, 168, .16);
+
+  /* ---------- Tableau éliminatoire (toujours « écran d'arène ») ---------- */
+  --board: #130A31;
+  --board-slot: #2A1D5C;
+  --board-line: #7D6BFF;
+  --board-muted: #BDB2EA;
+  --team-a: #00B4D8;   /* équipe du haut / domicile : cyan */
+  --team-b: #E21FA0;   /* équipe du bas / extérieur : magenta */
+
+  --radius: 14px;
+  --radius-lg: 24px;
+  --font: Inter, "Segoe UI Variable Text", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: Inter, "Segoe UI Variable Display", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-spring: cubic-bezier(.2, .9, .3, 1.35);
+  --ease-bounce: cubic-bezier(.3, 1.6, .5, 1);
+  color-scheme: light;
+}
+
+/* Thème sombre : « nuit d'arène » (bouton en haut à droite, mémorisé dans le navigateur) */
+:root[data-theme="dark"] {
+  --c-magenta: #FF3DB8;
+  --c-pink: #FF70D2;
+  --c-violet: #9B6BFF;
+  --c-blue: #4D8DFF;
+  --c-cyan: #2FE0F0;
+  --c-turquoise: #3FE0C8;
+  --c-green: #4ADE80;
+  --c-lime: #A6F23A;
+  --c-gold: #FFC93C;
+  --c-orange: #FF8A3D;
+  --c-coral: #FF5C86;
+
+  --bg: #0B0722;
+  --bg-2: #1A0F45;
+  --surface: rgba(30, 20, 68, .62);
+  --surface-solid: #1A1142;
+  --surface-2: rgba(255, 255, 255, .05);
+  --ink: #F4EFFF;
+  --muted: #AFA5D4;
+  --border: rgba(190, 160, 255, .15);
+  --border-strong: rgba(190, 160, 255, .28);
+  --pill: rgba(255, 255, 255, .08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, .35);
+  --shadow: 0 16px 40px -12px rgba(0, 0, 0, .6);
+  --shadow-lg: 0 34px 80px -16px rgba(0, 0, 0, .75);
+
+  --accent: #FF5CC8;
+  --accent-2: #3FE0EE;
+  --accent-soft: rgba(255, 61, 184, .16);
+  --accent-ink: #FFB3E6;
+  --danger: #FF6B8A;
+  --danger-soft: rgba(255, 92, 134, .14);
+  --danger-border: rgba(255, 92, 134, .42);
+  --done-bg: rgba(74, 222, 128, .14);
+  --done-ink: #86EFAC;
+  --done-border: rgba(74, 222, 128, .38);
+  --live-bg: rgba(255, 92, 134, .17);
+  --live-ink: #FF9DBA;
+  --up-bg: rgba(155, 107, 255, .2);
+  --up-ink: #CDB8FF;
+  --on-ink: #120A2E;
+  --chip-ink: #0B0722;
+  --gold-bg: linear-gradient(135deg, rgba(255, 201, 60, .16), rgba(255, 61, 184, .13) 55%, rgba(47, 224, 240, .12));
+  --gold-border: rgba(255, 201, 60, .4);
+  --podium-step: rgba(255, 255, 255, .06);
+  --dot: rgba(200, 170, 255, .13);
+
+  --board: #0D0726;
+  --board-slot: #271A57;
+  --team-a: #19C6E0;
+  --team-b: #F02FAE;
+  color-scheme: dark;
+}
+
+/* ==========================================================
+   Base
+   ========================================================== */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html {
+  background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  scroll-padding-top: 96px; /* la barre du haut reste visible au-dessus d'un élément ciblé */
+  transition: background-color .3s;
+}
+body { margin: 0; min-height: 100vh; overflow-x: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+::selection { background: color-mix(in srgb, var(--c-magenta) 30%, transparent); }
+:focus-visible { outline: 2.5px solid var(--c-violet); outline-offset: 2px; }
+
+/* Barres de défilement fines et colorées */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--c-violet) 45%, transparent) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: linear-gradient(var(--c-magenta), var(--c-violet), var(--c-cyan)); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ==========================================================
+   Fond animé (derrière toute l'application) :
+   aurores colorées qui dérivent, trame de points, faisceaux de projecteurs,
+   grille rétro au sol et icônes sport / e-sport qui flottent (ajoutées par js/fx.js)
+   ========================================================== */
+.bg-fx {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  background: radial-gradient(130% 90% at 50% -20%, var(--bg-2), var(--bg) 62%);
+}
+.bg-fx > * { position: absolute; }
+.bg-blob {
+  width: 62vmax; height: 62vmax; border-radius: 50%; opacity: .34;
+  background: radial-gradient(circle, var(--c) 0%, transparent 64%);
+  animation: bgDrift var(--t) ease-in-out infinite alternate; will-change: transform;
+}
+:root[data-theme="dark"] .bg-blob { opacity: .42; }
+.bg-blob-1 { --c: var(--c-magenta); --t: 23s; left: -22vmax; top: -26vmax; }
+.bg-blob-2 { --c: var(--c-cyan); --t: 27s; right: -24vmax; top: -10vmax; animation-delay: -6s; }
+.bg-blob-3 { --c: var(--c-gold); --t: 31s; left: 18vw; bottom: -34vmax; animation-delay: -12s; opacity: .26; }
+.bg-blob-4 { --c: var(--c-violet); --t: 25s; right: -10vmax; bottom: -26vmax; animation-delay: -3s; }
+.bg-blob-5 { --c: var(--c-coral); --t: 35s; left: 38vw; top: 18vh; width: 40vmax; height: 40vmax; animation-delay: -18s; opacity: .18; }
+:root[data-theme="dark"] .bg-blob-3 { opacity: .22; }
+@keyframes bgDrift {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(6vw, 4vh) scale(1.08); }
+  66% { transform: translate(-4vw, 8vh) scale(.94); }
+  100% { transform: translate(3vw, -5vh) scale(1.05); }
+}
+.bg-dots {
+  inset: 0;
+  background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.8px);
+  background-size: 26px 26px;
+  -webkit-mask: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 75%);
+  mask: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 75%);
+}
+/* faisceaux de projecteurs qui balaient doucement le haut de l'écran */
+.bg-beam {
+  top: -12vh; width: 34vw; min-width: 260px; height: 125vh; transform-origin: 50% 0;
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  animation: bgSweep var(--t) ease-in-out infinite alternate; opacity: .5;
+}
+.bg-beam-1 { left: 4vw; --t: 13s; --from: -26deg; --to: 8deg; background: linear-gradient(180deg, color-mix(in srgb, var(--c-magenta) 26%, transparent), transparent 70%); }
+.bg-beam-2 { right: 4vw; --t: 16s; --from: 24deg; --to: -10deg; background: linear-gradient(180deg, color-mix(in srgb, var(--c-cyan) 24%, transparent), transparent 70%); animation-delay: -5s; }
+:root:not([data-theme="dark"]) .bg-beam { opacity: .35; }
+@keyframes bgSweep { from { transform: rotate(var(--from)); } to { transform: rotate(var(--to)); } }
+/* sol en grille rétro qui défile (clin d'œil à l'e-sport) */
+.bg-floor {
+  left: -50%; right: -50%; bottom: -6vh; height: 46vh; overflow: hidden;
+  transform: perspective(36vh) rotateX(62deg); transform-origin: 50% 100%;
+  -webkit-mask: linear-gradient(to top, #000 10%, transparent 92%); mask: linear-gradient(to top, #000 10%, transparent 92%);
+  opacity: .5;
+}
+.bg-floor::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -60px; bottom: 0;
+  background:
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--c-cyan) 55%, transparent) 0 1.5px, transparent 1.5px 60px),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--c-magenta) 55%, transparent) 0 1.5px, transparent 1.5px 60px);
+  animation: bgFloor 2.6s linear infinite;
+}
+:root:not([data-theme="dark"]) .bg-floor { opacity: .22; }
+@keyframes bgFloor { to { transform: translateY(60px); } }
+/* icônes qui flottent */
+.bg-icons { inset: 0; }
+.bg-ico {
+  position: absolute; width: var(--s); height: var(--s); color: var(--c); opacity: .2;
+  animation: bgFloat var(--t) ease-in-out infinite alternate; animation-delay: var(--d);
+}
+:root[data-theme="dark"] .bg-ico { opacity: .26; filter: drop-shadow(0 0 8px var(--c)); }
+.bg-ico svg { display: block; width: 100%; height: 100%; }
+@keyframes bgFloat {
+  0% { transform: translate(0, 0) rotate(var(--r0)); }
+  50% { transform: translate(calc(var(--dx) * .5), -26px) rotate(calc(var(--r0) + 12deg)); }
+  100% { transform: translate(var(--dx), 14px) rotate(calc(var(--r0) - 10deg)); }
+}
+
+/* ==========================================================
+   Mise en page
+   ========================================================== */
+.page {
+  max-width: 480px; min-height: 100vh; min-height: 100dvh; margin: 0 auto;
+  padding: 12px 16px 28px; display: flex; flex-direction: column; gap: 16px;
+}
+.home-head, .form-col, .form-footer, .t-view, .pane { display: flex; flex-direction: column; gap: 14px; }
+.pane { min-width: 0; }
+.pane:not(.is-active) { display: none; } /* mobile : un onglet à la fois */
+.t-head-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.section { display: flex; flex-direction: column; gap: 10px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Barre du haut : îlot en verre dépoli, collé en haut de l'écran ---------- */
+.topbar {
+  position: sticky; top: 10px; z-index: 40;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  min-height: 60px; padding: 8px 10px 8px 14px; border-radius: 20px;
+  background: var(--surface); -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass);
+  border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+}
+.topbar::after { /* liseré arc-en-ciel qui défile sous la barre */
+  content: ""; position: absolute; left: 22px; right: 22px; bottom: -1px; height: 2px; border-radius: 2px;
+  background: var(--grad-rainbow); background-size: 200% 100%; animation: rainbowSlide 6s linear infinite; opacity: .85;
+}
+.topbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+/* Logo NexCup */
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 900; font-size: 22px; line-height: 1; letter-spacing: -.02em; }
+.brand-mark { height: 36px; width: auto; display: block; filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--c-magenta) 35%, transparent)); animation: brandBob 4s ease-in-out infinite; transition: transform .35s var(--ease-spring); }
+.brand-name { background: linear-gradient(90deg, var(--c-magenta), var(--c-violet) 30%, var(--c-cyan) 55%, var(--c-violet) 80%, var(--c-magenta)) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: gradSlide 7s linear infinite; }
+.brand-nex, .brand-cup { color: inherit; }
+.brand:hover .brand-mark { transform: rotate(-12deg) scale(1.15); }
+@keyframes brandBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+.title-lg { min-width: 0; font-family: var(--font-display); font-weight: 900; font-size: 22px; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.back { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--muted); font-weight: 700; font-size: 14px; padding: 8px 12px 8px 6px; border-radius: 12px; transition: color .2s, background-color .2s; }
+.back:hover { color: var(--accent); background: var(--pill); }
+
+/* ==========================================================
+   Typographie
+   ========================================================== */
+.h1 { margin: 0; font-family: var(--font-display); font-size: clamp(28px, 6vw, 34px); font-weight: 900; line-height: 1.06; letter-spacing: -.03em; }
+.h2 { margin: 0 0 4px; font-family: var(--font-display); font-size: 19px; font-weight: 900; letter-spacing: -.015em; display: flex; align-items: center; gap: 10px; }
+.lead { margin: 8px 0 0; font-size: 16px; color: var(--muted); }
+.muted { color: var(--muted); }
+.helper { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.helper b { color: var(--ink); }
+.grad-text {
+  background: linear-gradient(100deg, var(--c-magenta), var(--c-violet) 25%, var(--c-blue) 45%, var(--c-cyan) 65%, var(--c-violet) 85%, var(--c-magenta)) 0 0 / 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: gradSlide 8s linear infinite;
+}
+.grad-hot { background: linear-gradient(100deg, var(--c-coral), var(--c-orange), var(--c-gold), var(--c-orange), var(--c-coral)) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: gradSlide 6s linear infinite; }
+.kicker {
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+  font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase;
+  padding: 7px 13px 7px 10px; border-radius: 999px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass);
+}
+.kicker-dot { width: 10px; height: 10px; border-radius: 50%; background: conic-gradient(var(--c-magenta), var(--c-gold), var(--c-cyan), var(--c-violet), var(--c-magenta)); animation: spin 2.4s linear infinite; }
+.kicker b { background: var(--grad-hot); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.count {
+  font-size: 12px; font-weight: 900; color: #fff; border-radius: 999px; padding: 3px 9px;
+  background: var(--grad-brand); box-shadow: 0 4px 10px -4px var(--c-magenta);
+}
+.error {
+  margin: 0; padding: 11px 14px; border-radius: var(--radius); background: var(--danger-soft); color: var(--danger);
+  border: 1px solid var(--danger-border); font-size: 14px; font-weight: 700; animation: shakeX .45s;
+}
+
+/* ==========================================================
+   Écrans : mobile (défaut) → tablette → ordinateur
+   ========================================================== */
+@media (max-width: 1023px) { .only-desktop { display: none !important; } }
+@media (min-width: 1024px) { .only-mobile { display: none !important; } }
+
+@media (min-width: 768px) {
+  .page { max-width: 780px; padding: 14px 28px 44px; gap: 20px; }
+}
+@media (min-width: 1024px) {
+  .page { max-width: 1240px; padding: 16px 40px 64px; gap: 24px; }
+  .page-create { max-width: 1120px; }
+  .topbar { top: 14px; min-height: 68px; padding: 10px 14px 10px 20px; border-radius: 22px; }
+  .brand { font-size: 27px; }
+  .brand-mark { height: 44px; }
+  .h1 { font-size: 44px; }
+}
+@media (max-width: 600px) {
+  .h1 { font-size: 28px; }
+  .topbar { border-radius: 18px; }
+  .brand { font-size: 21px; }
+  .title-lg { font-size: 18px; }
+}

@@ -49,7 +49,7 @@ const Guide = (() => {
     const r = 38 + (i % 3) * 6;
     return `<span class="g-spark" style="left:${50 + Math.cos(a) * r}%;top:${50 + Math.sin(a) * r}%;--d:${(i * 0.27) % 2}s"></span>`;
   }).join('');
-  const COLORS = ['#A0228F', '#1E9FAB', '#FFB81C', '#D95BC6', '#4FD1D6', '#FFE14D'];
+  const COLORS = ['#E21FA0', '#7B3FF2', '#00B4D8', '#FFB81C', '#FF3D6E', '#6BCB00', '#2F6BFF', '#FF7A1A'];
   const confetti = () =>
     Array.from({ length: 26 }, (_, i) => {
       const a = (i / 26) * 360 + Math.random() * 14;
@@ -136,111 +136,160 @@ const Guide = (() => {
     });
   }
 
-  /* ---------- Cinématiques plein écran (4 s, sans texte) avant le guide ----------
-     Une scène différente par étape, liée à son sujet :
-     · 1. Crée le tournoi    → « Décollage » : la coupe se charge, décolle et traverse les nuages jusqu'au soleil
-     · 2. Saisis les scores  → « Duel » : deux énergies (magenta / turquoise) s'affrontent, la coupe naît de l'impact,
-                                 les points s'allument de chaque côté comme un tableau de score
-     · 3. Suis le classement → « Podium » : les marches montent, la coupe tombe sur la première, feux d'artifice
+  /* ---------- Cinématiques plein écran (4,5 s, sans texte) avant le guide ----------
+     Chaque scène mélange le sport (stade, pelouse, lumière dorée) et l'e-sport (arène néon, grille, pixels),
+     séparés par une diagonale lumineuse, et illustre le but de l'étape :
+     · 1. Crée le tournoi    → « Fusion » : un ballon et une manette se rencontrent au centre,
+                                 le tableau du tournoi se dessine depuis l'impact, la coupe se pose au milieu
+     · 2. Saisis les scores  → « Tableau de score » : but côté stade, tir réussi côté arène, les chiffres basculent,
+                                 le gagnant monte dans la case du tour suivant
+     · 3. Suis le classement → « Classement en direct » : les lignes arrivent, les barres se remplissent,
+                                 une équipe double les autres, la coupe se pose sur la première place
      Un clic, Échap, Entrée ou Espace passe directement au guide. */
-  const CINE_MS = 4000;
-  const SCENES = ['launch', 'duel', 'podium'];
+  const CINE_MS = 4500;
+  const SCENES = ['create', 'score', 'rank'];
   let cine = null;
   let cineTimers = [];
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const TROPHY = '<img class="c-trophy" src="assets/logo/nexcup-trophy.png" alt="" width="440" height="411">';
+  const TROPHY = '<img class="x-trophy-img" src="assets/logo/nexcup-trophy.png" alt="" width="440" height="411">';
+  const GOLD = ['#FFE27A', '#FFC93C', '#FFB81C', '#FFFFFF'];
+  const NEON = ['#FF2BD6', '#00F0FF', '#B4FF00', '#7C4DFF'];
+  const MIX = ['#FFE27A', '#00F0FF', '#FFB81C', '#FF2BD6', '#FFFFFF', '#B4FF00'];
+  const PALETTES = { gold: GOLD, neon: NEON, mix: MIX };
+  // Même condition que l'unité --u du CSS (téléphone tenu en hauteur)
+  const isPortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 760px)').matches;
 
-  const burstHTML = (n, minD, maxD, colors = COLORS) =>
+  // Explosion de confettis (rectangles dorés) ou de pixels (carrés néon)
+  const burstHTML = (n, minD, maxD, colors) =>
     Array.from({ length: n }, (_, i) => {
       const a = (i / n) * 360 + rnd(0, 10);
-      return `<span class="c-confetti" style="--a:${a}deg;--dist:calc(${rnd(minD, maxD)} * var(--u));--c:${colors[i % colors.length]};--r:${rnd(-450, 450)}deg;--w:calc(${rnd(0.9, 2)} * var(--u))"></span>`;
+      return `<span class="x-conf" style="--a:${a}deg;--dist:calc(${rnd(minD, maxD).toFixed(1)} * var(--u));--c:${colors[i % colors.length]};--r:${rnd(-450, 450).toFixed(0)}deg;--w:calc(${rnd(0.9, 2).toFixed(2)} * var(--u))"></span>`;
     }).join('');
+  // data-* : nombre, distances min / max, palette — rempli à chaque lecture (nouveau tirage)
+  const burst = (cls, n, min, max, pal) => `<div class="x-burst ${cls}" data-n="${n}" data-min="${min}" data-max="${max}" data-pal="${pal}"></div>`;
 
-  // Un nuage = une forme arrondie + deux « bosses » (::before / ::after)
-  const cloudsHTML = (n, minW, maxW) =>
-    Array.from({ length: n }, () => `<span class="c-cloud" style="left:${rnd(-15, 95)}%;top:${rnd(0, 90)}%;--w:calc(${rnd(minW, maxW)} * var(--u));--o:${rnd(0.55, 0.95)}"></span>`).join('');
-  const starsHTML = (n) =>
-    Array.from({ length: n }, () => `<span class="c-star" style="left:${rnd(0, 100)}%;top:${rnd(0, 100)}%;--s:calc(${rnd(0.5, 1.8)} * var(--u));--d:${rnd(0, 1.5).toFixed(2)}s"></span>`).join('');
+  // Icônes dessinées (pas d'image) : ballon, basket, manette, joystick
+  const ICONS = {
+    ball: `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#1A1A1A" stroke-width="4"/>
+      <polygon points="50,30 69,44 62,66 38,66 31,44" fill="#1A1A1A"/>
+      <path d="M50 30V5M69 44l23-8M62 66l14 22M38 66L24 88M31 44L8 36" stroke="#1A1A1A" stroke-width="4"/></svg>`,
+    basket: `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#F08A24" stroke="#3A1A00" stroke-width="4"/>
+      <path d="M50 4v92M4 50h92M20 16q30 34 0 68M80 16q-30 34 0 68" fill="none" stroke="#3A1A00" stroke-width="4"/></svg>`,
+    pad: `<svg viewBox="0 0 120 80" aria-hidden="true"><path d="M22 12h76a18 18 0 0 1 18 17l2 30a13 13 0 0 1-23 9l-11-13H36L25 68a13 13 0 0 1-23-9l2-30a18 18 0 0 1 18-17z" fill="#24124F" stroke="#00F0FF" stroke-width="4"/>
+      <path d="M30 28v20M20 38h20" stroke="#00F0FF" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="88" cy="29" r="5" fill="#FF2BD6"/><circle cx="98" cy="39" r="5" fill="#B4FF00"/><circle cx="78" cy="39" r="5" fill="#FFE14D"/><circle cx="88" cy="49" r="5" fill="#00F0FF"/></svg>`,
+    stick: `<svg viewBox="0 0 100 100" aria-hidden="true"><rect x="12" y="62" width="76" height="26" rx="9" fill="#24124F" stroke="#FF2BD6" stroke-width="4"/>
+      <rect x="46" y="30" width="8" height="34" rx="3" fill="#D9D3EE"/><circle cx="50" cy="26" r="15" fill="#FF2BD6"/><circle cx="74" cy="75" r="5" fill="#00F0FF"/></svg>`,
+  };
 
-  // Scène 1 : décollage à travers les nuages
-  function sceneLaunch() {
-    const lines = Array.from({ length: 26 }, () => `<span class="c-line" style="left:${rnd(0, 100)}%;--h:${rnd(14, 40)}vh;--d:${rnd(0, 0.4).toFixed(2)}s;--t:${rnd(0.22, 0.4).toFixed(2)}s"></span>`).join('');
-    const trail = Array.from({ length: 18 }, (_, i) => `<span class="c-ember" style="--x:${rnd(-30, 30)}%;--d:${(i * 0.045).toFixed(3)}s;--c:${COLORS[i % COLORS.length]}"></span>`).join('');
+  // Décor commun : à gauche le stade (pelouse, projecteurs), à droite l'arène néon (grille), séparés en diagonale
+  const bgHTML = () => `
+    <div class="x-sport"><span class="x-flood x-flood-1"></span><span class="x-flood x-flood-2"></span><span class="x-pitch"></span></div>
+    <div class="x-neon"><span class="x-sun"></span><span class="x-grid"></span><span class="x-scan"></span></div>
+    <svg class="x-seam" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="xSeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#00F0FF"/></linearGradient></defs>
+      <line x1="58" y1="0" x2="42" y2="100" stroke="url(#xSeam)" stroke-width="3" vector-effect="non-scaling-stroke"/>
+    </svg>`;
+
+  // Scène 1 : le ballon et la manette fusionnent, le tableau du tournoi se dessine
+  function sceneCreate() {
+    // Tableau symétrique : 4 + 2 + 1 cases de chaque côté (or = sport, néon = e-sport).
+    // Sur un téléphone en hauteur, le tableau est étiré verticalement (et les cases un peu plus épaisses)
+    // pour occuper l'écran au lieu d'une fine bande.
+    const tall = isPortrait();
+    const H = tall ? 170 : 100;
+    const Y = (v) => +(v * H / 100).toFixed(1);
+    const ph = tall ? 13 : 10;
+    const pill = (x, cy, side, d, w = 26) =>
+      `<g class="bk-pill bk-${side}" style="--d:${d}s"><rect x="${x}" y="${Y(cy) - ph / 2}" width="${w}" height="${ph}" rx="${ph / 2}"/><circle cx="${side === 'l' ? x + 5 : x + w - 5}" cy="${Y(cy)}" r="${tall ? 3.2 : 2.6}"/></g>`;
+    // crochet qui relie deux cases (x1 → coude en xm → case suivante en x2)
+    const join = (x1, xm, x2, ya, yb) => `M${x1} ${Y(ya)}H${xm}V${Y(yb)}H${x1}M${xm} ${Y((ya + yb) / 2)}H${x2}`;
+    const line = (d, delay) => `<path class="bk-line" d="${d}" pathLength="1" style="--d:${delay}s"/>`;
+    const r1 = [14, 38, 62, 86];
+    const bracket = `
+      <svg class="bk" viewBox="0 0 200 ${H}" aria-hidden="true">
+        ${line(join(30, 35, 40, 14, 38), 1.85)}${line(join(30, 35, 40, 62, 86), 1.9)}
+        ${line(join(170, 165, 160, 14, 38), 1.85)}${line(join(170, 165, 160, 62, 86), 1.9)}
+        ${line(join(66, 68, 70, 26, 74), 2.2)}${line(join(134, 132, 130, 26, 74), 2.2)}
+        ${line(`M92 ${Y(50)}H108`, 2.5)}
+        ${r1.map((y, i) => pill(4, y, 'l', 1.55 + i * 0.06)).join('')}
+        ${r1.map((y, i) => pill(170, y, 'r', 1.58 + i * 0.06)).join('')}
+        ${pill(40, 26, 'l', 2.0)}${pill(40, 74, 'l', 2.05)}${pill(134, 26, 'r', 2.0)}${pill(134, 74, 'r', 2.05)}
+        ${pill(70, 50, 'l', 2.3, 22)}${pill(108, 50, 'r', 2.3, 22)}
+        <circle class="bk-node" cx="100" cy="${Y(50)}" r="4"/>
+      </svg>`;
     return `
-      <div class="scene scene-launch">
-        <div class="c-sky"></div>
-        <div class="c-stars">${starsHTML(36)}</div>
-        <div class="c-sun"></div>
-        <div class="c-lines">${lines}</div>
-        <div class="c-clouds c-clouds-far">${cloudsHTML(12, 14, 26)}</div>
-        <div class="c-clouds c-clouds-mid">${cloudsHTML(10, 22, 40)}</div>
-        <div class="c-wave"></div>
-        <div class="c-burst c-burst-1"></div>
-        <div class="c-trophy-wrap">
-          <div class="c-aura"></div>
-          <div class="c-trail">${trail}</div>
-          ${TROPHY}
-        </div>
-        <div class="c-clouds c-clouds-near">${cloudsHTML(7, 40, 70)}</div>
-        <div class="c-floor"></div>
-        <div class="c-burst c-burst-2"></div>
-        <div class="c-flash"></div>
+      <div class="scene scene-create">
+        ${bgHTML()}
+        <div class="x-trail x-trail-l"></div><div class="x-trail x-trail-r"></div>
+        <div class="cr-ball">${ICONS.ball}</div>
+        <div class="cr-pad">${ICONS.pad}</div>
+        <div class="x-ring cr-ring-1"></div><div class="x-ring cr-ring-2"></div>
+        <div class="cr-bracket">${bracket}<div class="x-trophy cr-trophy">${TROPHY}</div></div>
+        ${burst('cr-burst-1', 30, 20, 45, 'mix')}
+        ${burst('cr-burst-2', 46, 30, 75, 'mix')}
+        <div class="x-flash"></div>
       </div>`;
   }
 
-  // Scène 2 : duel d'énergies et tableau de score lumineux
-  function sceneDuel() {
-    const pips = (side) =>
-      `<div class="d-pips d-pips-${side}">${Array.from({ length: 5 }, (_, i) => `<span style="--i:${i}"></span>`).join('')}</div>`;
-    const bolts = Array.from({ length: 8 }, (_, i) => `<span class="d-bolt" style="--a:${i * 45 + rnd(-12, 12)}deg;--l:calc(${rnd(28, 46)} * var(--u))"></span>`).join('');
-    const tail = (c) => Array.from({ length: 10 }, (_, i) => `<span style="--i:${i};--c:${c}"></span>`).join('');
+  // Scène 2 : but côté stade, tir réussi côté arène, le tableau de score bascule, le gagnant avance
+  function sceneScore() {
+    const digits = (n) => Array.from({ length: n }, (_, i) => `<span>${i}</span>`).join('');
+    const pixels = Array.from({ length: 22 }, (_, i) => `<span style="--a:${(i / 22) * 360 + rnd(-8, 8)}deg;--dist:calc(${rnd(8, 16).toFixed(1)} * var(--u));--c:${NEON[i % NEON.length]}"></span>`).join('');
     return `
-      <div class="scene scene-duel">
-        <div class="d-bg"></div>
-        <div class="d-floor"></div>
-        <div class="d-spot d-spot-l"></div><div class="d-spot d-spot-r"></div>
-        <div class="d-split"></div>
-        ${pips('l')}${pips('r')}
-        <div class="d-orb d-orb-l"><div class="d-tail">${tail('#D95BC6')}</div></div>
-        <div class="d-orb d-orb-r"><div class="d-tail">${tail('#4FD1D6')}</div></div>
-        <div class="d-impact"></div>
-        <div class="d-bolts">${bolts}</div>
-        <div class="d-ring d-ring-1"></div><div class="d-ring d-ring-2"></div>
-        <div class="c-burst d-burst-1"></div>
-        <div class="d-trophy-wrap">
-          <div class="d-orbit d-orbit-l"></div><div class="d-orbit d-orbit-r"></div>
-          ${TROPHY}
+      <div class="scene scene-score">
+        ${bgHTML()}
+        <div class="sc-goal"><svg viewBox="0 0 100 60" aria-hidden="true">
+          <defs><pattern id="scNet" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 0L6 6M6 0L0 6" stroke="rgba(255,255,255,.45)" stroke-width=".8"/></pattern></defs>
+          <rect x="4" y="4" width="92" height="56" fill="url(#scNet)"/><path d="M4 60V4H96V60" fill="none" stroke="#fff" stroke-width="4"/></svg></div>
+        <div class="sc-shot">${ICONS.ball}</div>
+        <div class="sc-target"><span></span><span></span></div>
+        <div class="sc-laser"></div>
+        <div class="sc-cross"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="12" fill="none" stroke="#B4FF00" stroke-width="2.5"/><path d="M20 2v10M20 28v10M2 20h10M28 20h10" stroke="#B4FF00" stroke-width="2.5"/></svg></div>
+        <div class="sc-pixels">${pixels}</div>
+        <div class="sc-board">
+          <div class="sc-side sc-side-l"><span class="sc-ico">${ICONS.ball}</span><div class="sc-digit"><div class="sc-strip sc-strip-l">${digits(3)}</div></div></div>
+          <span class="sc-colon"></span>
+          <div class="sc-side sc-side-r"><span class="sc-ico">${ICONS.pad}</span><div class="sc-digit"><div class="sc-strip sc-strip-r">${digits(2)}</div></div></div>
         </div>
-        <div class="c-burst d-burst-2"></div>
-        <div class="c-flash d-flash"></div>
+        <div class="sc-next"><span class="sc-chev"></span><span class="sc-chev"></span><span class="sc-chev"></span><span class="sc-slot"></span><span class="sc-winner">${ICONS.ball}</span></div>
+        ${burst('sc-burst', 40, 25, 60, 'gold')}
+        <div class="x-flash"></div>
       </div>`;
   }
 
-  // Scène 3 : podium, projecteurs, barres de classement et feux d'artifice
-  function scenePodium() {
-    const bars = Array.from({ length: 9 }, (_, i) => `<span style="--i:${i};--h:${rnd(18, 62)}vh"></span>`).join('');
-    const fireworks = [
-      [22, 26, 2.15, '#FFD24A'], [78, 22, 2.35, '#4FD1D6'], [50, 12, 2.6, '#D95BC6'], [14, 46, 2.85, '#4FD1D6'], [86, 44, 3.0, '#FFD24A'],
-    ]
-      .map(([x, y, d, c]) => `<div class="p-fw" style="left:${x}%;top:${y}%;--d:${d}s;--c:${c}">${Array.from({ length: 18 }, (_, i) => `<span style="--a:${i * 20}deg"></span>`).join('')}</div>`)
+  // Scène 3 : classement en direct — une équipe double les autres, la coupe se pose sur la première place
+  function sceneRank() {
+    // [icône, monde, positions (avant / après le 1er dépassement / à la fin), longueur de la barre aux mêmes moments]
+    const rows = [
+      ['ball', 'gold', [0, 0, 1], [0.82, 0.86, 0.86]],
+      ['pad', 'neon', [1, 2, 2], [0.7, 0.72, 0.72]],
+      ['basket', 'gold', [2, 1, 0], [0.55, 0.8, 0.98]],
+      ['stick', 'neon', [3, 3, 3], [0.38, 0.42, 0.46]],
+    ];
+    const rowsHTML = rows
+      .map(([ico, world, p, w], i) => `
+        <div class="rk-row rk-${world} ${i === 2 ? 'rk-up' : ''}" style="--p0:${p[0]};--p1:${p[1]};--p2:${p[2]}">
+          <div class="rk-in" style="--d:${(0.45 + i * 0.12).toFixed(2)}s">
+            <span class="rk-ico">${ICONS[ico]}</span>
+            <span class="rk-name"></span>
+            <span class="rk-bar"><span style="--w0:${w[0]};--w1:${w[1]};--w2:${w[2]}"></span></span>
+            ${i === 2 ? '<span class="rk-arrows"><span></span><span></span></span>' : ''}
+          </div>
+        </div>`)
       .join('');
-    const rain = Array.from({ length: 40 }, (_, i) => `<span style="left:${rnd(0, 100)}%;--c:${COLORS[i % COLORS.length]};--d:${rnd(1.9, 3).toFixed(2)}s;--t:${rnd(1.2, 2).toFixed(2)}s;--r:${rnd(-540, 540)}deg;--x:${rnd(-8, 8)}vw"></span>`).join('');
     return `
-      <div class="scene scene-podium">
-        <div class="p-bg"></div>
-        <div class="c-stars">${starsHTML(26)}</div>
-        <div class="p-bars">${bars}</div>
-        <div class="p-beam p-beam-1"></div><div class="p-beam p-beam-2"></div><div class="p-beam p-beam-3"></div>
-        ${fireworks}
-        <div class="p-podium">
-          <div class="p-step p-step-2"><span class="p-medal"></span></div>
-          <div class="p-step p-step-1"><span class="p-medal"></span></div>
-          <div class="p-step p-step-3"><span class="p-medal"></span></div>
+      <div class="scene scene-rank">
+        ${bgHTML()}
+        <div class="rk">
+          <div class="rk-ranks">${[1, 2, 3, 4].map((n) => `<span class="rk-rank rk-rank-${n}">${n}</span>`).join('')}</div>
+          <div class="rk-rows">${rowsHTML}</div>
+          <div class="x-trophy rk-trophy">${TROPHY}</div>
         </div>
-        <div class="p-dust"></div>
-        <div class="p-trophy-wrap"><div class="p-glow"></div>${TROPHY}</div>
-        <div class="p-rain">${rain}</div>
-        <div class="c-flash p-flash"></div>
+        ${burst('rk-fw-1', 22, 10, 18, 'gold')}
+        ${burst('rk-fw-2', 22, 10, 18, 'neon')}
+        ${burst('rk-burst', 44, 30, 70, 'mix')}
+        <div class="x-flash"></div>
       </div>`;
   }
 
@@ -248,23 +297,25 @@ const Guide = (() => {
     cine = document.createElement('div');
     cine.className = 'cine';
     cine.setAttribute('aria-hidden', 'true');
-    cine.innerHTML = sceneLaunch() + sceneDuel() + scenePodium();
+    cine.innerHTML = sceneCreate() + sceneScore() + sceneRank();
+    cine.dataset.portrait = isPortrait();
     document.body.appendChild(cine);
   }
 
   function playCinematic(scene, done) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+    // l'écran a pivoté depuis la dernière fois : on reconstruit les scènes à la bonne forme
+    if (cine && cine.dataset.portrait !== String(isPortrait())) {
+      cine.remove();
+      cine = null;
+    }
     if (!cine) buildCine();
     cine.dataset.scene = scene;
     // nouvelles explosions de confettis à chaque fois
-    const set = (sel, html) => (cine.querySelector(sel).innerHTML = html);
-    if (scene === 'launch') {
-      set('.c-burst-1', burstHTML(34, 25, 55));
-      set('.c-burst-2', burstHTML(46, 35, 80));
-    } else if (scene === 'duel') {
-      set('.d-burst-1', burstHTML(40, 25, 60, ['#D95BC6', '#4FD1D6', '#FFE14D', '#FFFFFF']));
-      set('.d-burst-2', burstHTML(46, 35, 85));
-    }
+    cine.querySelectorAll(`.scene-${scene} .x-burst`).forEach((el) => {
+      const { n, min, max, pal } = el.dataset;
+      el.innerHTML = burstHTML(+n, +min, +max, PALETTES[pal] || MIX);
+    });
     let finished = false;
     const finish = () => {
       if (finished) return;
@@ -293,7 +344,7 @@ const Guide = (() => {
   function open(i = 0) {
     if (!dlg) build();
     index = i;
-    playCinematic(SCENES[i] || 'launch', () => {
+    playCinematic(SCENES[i] || 'create', () => {
       render(true);
       dlg.showModal();
       dlg.querySelector('.g-tabs .on').focus({ preventScroll: true });

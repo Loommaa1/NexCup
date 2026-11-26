@@ -5,7 +5,7 @@
 // Victory.play({ theme, tournament, winner, second, third, reward }, done) — un clic, Échap ou « Passer » arrête.
 const Victory = (() => {
   const DURATION = 10000;
-  const BRAND = ['#A0228F', '#1E9FAB', '#FFB81C', '#D95BC6', '#4FD1D6', '#FFE14D'];
+  const BRAND = ['#E21FA0', '#7B3FF2', '#00B4D8', '#FFB81C', '#FF3D6E', '#6BCB00', '#2F6BFF', '#FF7A1A'];
   const GOLD = ['#FFE27A', '#FFC93C', '#FFB81C', '#FFF3C4', '#E0A800'];
   const NEON = ['#FF2BD6', '#00F0FF', '#B4FF00', '#FFE14D', '#7C4DFF'];
   let root = null;

@@ -68,6 +68,43 @@
   const countLabel = (t, n) => `${n} ${n > 1 ? W(t).many : W(t).one}`;
   const teamName = (t, id) => (id === null || id === undefined ? '' : t.teams[id].name);
 
+  /* ---------------- Couleurs et icônes des tournois ---------------- */
+  // Chaque tournoi reçoit un duo de couleurs stable (calculé depuis son identifiant)
+  const ACCENTS = [
+    ['var(--c-magenta)', 'var(--c-violet)'],
+    ['var(--c-cyan)', 'var(--c-blue)'],
+    ['var(--c-orange)', 'var(--c-gold)'],
+    ['var(--c-coral)', 'var(--c-magenta)'],
+    ['var(--c-lime)', 'var(--c-turquoise)'],
+    ['var(--c-violet)', 'var(--c-cyan)'],
+    ['var(--c-gold)', 'var(--c-coral)'],
+    ['var(--c-blue)', 'var(--c-violet)'],
+  ];
+  const hashOf = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const accentOf = (t) => ACCENTS[hashOf(t.id) % ACCENTS.length];
+  const catOf = (t) => (t.discipline && t.discipline.cat) || 'other';
+  // Icône du domaine : quelques sports reconnus par leur nom, sinon ballon (sport), manette (jeu vidéo) ou coupe
+  function glyphOf(t) {
+    const n = Disciplines.norm(t.discipline ? t.discipline.name : '');
+    if (/basket/.test(n)) return 'basket';
+    if (/tennis|badminton|ping|padel|squash/.test(n)) return 'racket';
+    if (/flechette|petanque|boule|billard|bowling|curling|echecs|dames/.test(n)) return 'target';
+    return { sport: 'ball', game: 'pad' }[catOf(t)] || 'trophy';
+  }
+
+  // Bandeau qui défile sur l'accueil : un aperçu de tout ce qu'on peut organiser
+  const TICKER = [
+    ['⚽', 'Football', '--c-green'], ['🎮', 'Rocket League', '--c-blue'], ['🏀', 'Basket-ball', '--c-orange'], ['🏓', 'Tennis de table', '--c-coral'],
+    ['🕹️', 'Fortnite', '--c-violet'], ['🏐', 'Volley-ball', '--c-gold'], ['🎯', 'Fléchettes', '--c-magenta'], ['♟️', 'Échecs', '--c-cyan'],
+    ['🏎️', 'Mario Kart', '--c-coral'], ['🤾', 'Handball', '--c-blue'], ['🎮', 'League of Legends', '--c-gold'], ['🏸', 'Badminton', '--c-lime'],
+    ['🏉', 'Rugby', '--c-green'], ['🏒', 'Hockey sur glace', '--c-cyan'], ['🎳', 'Bowling', '--c-violet'], ['🎾', 'Tennis', '--c-lime'],
+    ['🥊', 'Boxe', '--c-coral'], ['🎮', 'EA Sports FC', '--c-magenta'], ['🎱', 'Billard', '--c-blue'], ['🏆', 'Et des centaines d’autres…', '--c-gold'],
+  ];
+  const tickerHTML = () => {
+    const items = TICKER.map(([e, n, c]) => `<span class="ticker-item" style="--tc:var(${c})"><i>${e}</i>${esc(n)}</span>`).join('');
+    return `<div class="ticker" aria-hidden="true"><div class="ticker-track">${items}${items}</div></div>`;
+  };
+
   /* ---------------- Logo NexCup (en-tête) ---------------- */
   const brandHTML = () => `
     <a href="#/" class="brand" aria-label="NexCup, accueil">
@@ -217,6 +254,66 @@
       </div>`;
   }
 
+  // Grande accroche de l'accueil quand il n'y a encore aucun tournoi
+  function heroHTML() {
+    const sparks = [[14, 40, '#FFE27A', 0], [86, 34, '#7FF3FF', .6], [28, 82, '#FF8BDA', 1.1], [72, 88, '#B4FF3A', .3], [50, 6, '#FFE27A', 1.5], [94, 66, '#FF8BDA', .9]]
+      .map(([x, y, c, d]) => `<span class="hero-spark" style="left:${x}%;top:${y}%;--c:${c};--d:${d}s"></span>`).join('');
+    return `
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="kicker"><span class="kicker-dot"></span>Sport <b>✕</b> e-sport</span>
+          <h1 class="hero-title">Organise ton prochain <span class="grad-text">tournoi</span><span class="hero-bolt" aria-hidden="true">⚡</span></h1>
+          <p class="lead">Sport ou jeux vidéo, en quelques minutes : tableau, scores et classement se mettent à jour en direct.</p>
+          <div class="hero-cta">
+            <a class="btn btn-primary btn-lg start-btn" href="#/new" data-tour-start>${ICON.plus}Créer mon premier tournoi</a>
+            <button type="button" class="btn btn-outline btn-lg" data-guide="0">${FX.glyph('star')}Voir le guide</button>
+          </div>
+          ${tourHidden() ? '' : '<p class="helper start-hint">Un petit tutoriel te guidera pas à pas.</p>'}
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <span class="hero-glow"></span>
+          <span class="hero-orbit hero-orbit-1"><i></i></span>
+          <span class="hero-orbit hero-orbit-2"><i></i></span>
+          <img class="hero-trophy" src="assets/logo/nexcup-trophy.png" alt="" width="440" height="411">
+          <span class="hero-bubble hero-bubble-1">${FX.glyph('ball')}</span>
+          <span class="hero-bubble hero-bubble-2">${FX.glyph('pad')}</span>
+          <span class="hero-bubble hero-bubble-3">${FX.glyph('medal')}</span>
+          <span class="hero-bubble hero-bubble-4">${FX.glyph('bolt')}</span>
+          ${sparks}
+        </div>
+      </section>`;
+  }
+
+  // Les trois étapes (chacune ouvre son guide animé)
+  const STEPS_HOME = [
+    ['trophy', 'Crée le tournoi', 'Choisis le sport ou le jeu, le lieu, le format (éliminatoire ou championnat) et les équipes.'],
+    ['target', 'Saisis les scores', 'Clique sur un match : boutons + / −, ½ et Max. Le gagnant avance tout seul.'],
+    ['chart', 'Suis le classement', 'Tableau, classement et podium se mettent à jour en direct.'],
+  ];
+  const stepsHTML = () => `
+    <ol class="steps">
+      ${STEPS_HOME.map(([g, title, text], i) => `
+        <li><button type="button" class="step-btn" data-guide="${i}">
+          <span class="step-ico" aria-hidden="true">${FX.glyph(g)}</span>
+          <span class="step-num" aria-hidden="true">0${i + 1}</span>
+          <b>${i + 1}. ${title}</b><span class="step-desc">${text}</span><em>Voir le guide →</em>
+        </button></li>`).join('')}
+    </ol>`;
+
+  // Chiffres clés de l'accueil (ils défilent à l'arrivée sur la page)
+  function statsHTML(all) {
+    const live = all.filter((t) => T.status(t) === 'live').length;
+    const played = all.reduce((n, t) => n + progress(t).done, 0);
+    const stat = (glyph, n, label, cls = '') =>
+      `<div class="stat ${cls}"><span class="stat-ico" aria-hidden="true">${FX.glyph(glyph)}</span><b data-count="${n}">${n}</b><span>${label}</span></div>`;
+    return `
+      <div class="stats">
+        ${stat('trophy', all.length, all.length > 1 ? 'tournois' : 'tournoi')}
+        ${stat('bolt', live, 'en cours', live ? 'stat-live' : '')}
+        ${stat('ball', played, played > 1 ? 'matchs joués' : 'match joué')}
+      </div>`;
+  }
+
   function renderHome() {
     const all = Store.all();
     // Sur ordinateur, le bouton « Créer » est dans la barre du haut ; sur mobile, en bas de l'écran
@@ -232,9 +329,13 @@
         ${
           all.length
             ? `<div class="home-head">
-                 <h1 class="h1">Mes tournois</h1>
+                 <div class="home-title-wrap">
+                   <span class="kicker"><span class="kicker-dot"></span>Sport <b>✕</b> e-sport</span>
+                   <h1 class="h1">Mes <span class="grad-text">tournois</span></h1>
+                 </div>
                  <div class="home-filter">${domainComboHTML('homeDomain', 'Domaine', 'Tous les sports et jeux vidéo')}</div>
                </div>
+               ${statsHTML(all)}
                <div class="home-toolbar">
                  <div class="search-box">
                    <span class="combo-icon">${ICON.search}</span>
@@ -243,17 +344,9 @@
                  <div class="chips" id="statusChips" role="group" aria-label="Filtrer par état"></div>
                </div>
                <div id="homeList" class="cards"></div>`
-            : `<div class="welcome">
-                 <h1 class="h1">Organise ton prochain tournoi</h1>
-                 <p class="lead">Sport ou jeux vidéo, en quelques minutes.</p>
-               </div>
-               <ol class="steps">
-                 <li><button type="button" class="step-btn" data-guide="0"><b>1. Crée le tournoi</b><span>Choisis le sport ou le jeu, le lieu, le format (éliminatoire ou championnat) et les équipes.</span><em>Voir le guide →</em></button></li>
-                 <li><button type="button" class="step-btn" data-guide="1"><b>2. Saisis les scores</b><span>Clique sur un match : boutons + / −, ½ et Max. Le gagnant avance tout seul.</span><em>Voir le guide →</em></button></li>
-                 <li><button type="button" class="step-btn" data-guide="2"><b>3. Suis le classement</b><span>Tableau, classement et podium se mettent à jour en direct.</span><em>Voir le guide →</em></button></li>
-               </ol>
-               <a class="btn btn-primary btn-lg start-btn" href="#/new" data-tour-start>${ICON.plus}Créer mon premier tournoi</a>
-               ${tourHidden() ? '' : '<p class="helper start-hint">Un petit tutoriel te guidera pas à pas.</p>'}`
+            : `${heroHTML()}
+               ${tickerHTML()}
+               ${stepsHTML()}`
         }
         <div class="home-footer">
           <button type="button" class="btn btn-ghost btn-sm" data-action="export" ${all.length ? '' : 'disabled'}>${ICON.download}Sauvegarder mes tournois</button>
@@ -290,7 +383,7 @@
         .filter((t) => homeFilter.status === 'all' || T.status(t) === homeFilter.status)
         .sort((x, y) => order[T.status(x)] - order[T.status(y)] || y.createdAt - x.createdAt);
       listEl.innerHTML = list.length
-        ? list.map((t, i) => tournamentCard(t).replace('<article class="t-card"', `<article class="t-card" style="--i:${Math.min(i, 8)}"`)).join('')
+        ? list.map((t, i) => tournamentCard(t, i)).join('')
         : `<div class="empty">
              <strong>Aucun tournoi ne correspond</strong>
              <span>Change la recherche ou les filtres.</span>
@@ -314,6 +407,7 @@
       });
     }
     renderList();
+    FX.countUp(app.querySelector('.stats'));
 
     // Restaurer une sauvegarde (fichier .json)
     app.querySelector('#importFile').addEventListener('change', async (e) => {
@@ -388,25 +482,29 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function kv(label, value) {
-    return `<div class="kv"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+  function kv(label, value, cls = '') {
+    return `<div class="kv ${cls}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
   }
 
-  function tournamentCard(t) {
+  // Carte d'un tournoi : bandeau et halo à ses couleurs, icône du domaine en filigrane
+  function tournamentCard(t, i = 0) {
     const s = T.status(t);
     const w = T.winner(t);
+    const [a1, a2] = accentOf(t);
+    const g = FX.glyph(glyphOf(t));
     return `
-      <article class="t-card">
+      <article class="t-card" style="--i:${Math.min(i, 8)};--a1:${a1};--a2:${a2}">
+        <span class="t-card-art" aria-hidden="true">${g}</span>
         <div class="t-card-head"><h2>${esc(t.name)}</h2><span class="badge badge-${s}">${STATUS[s]}</span></div>
+        <span class="t-card-tag"><i aria-hidden="true">${g}</i><span>${esc(domainLabel(t) || (t.type === 'elim' ? 'Éliminatoire' : 'Championnat'))}</span></span>
         <div class="divider"></div>
-        ${t.discipline ? kv('Domaine', domainLabel(t)) : ''}
         ${kv('Lieu', t.location || '—')}
         ${t.venue ? kv('Salle / stade', t.venue) : ''}
         ${kv('Date', fmtDate(t.date))}
         ${kv(W(t).Many, countLabel(t, t.teams.length))}
         ${kv('Format', formatLabel(t))}
         ${t.reward ? kv('Récompense', t.reward) : ''}
-        ${w !== null ? kv('Vainqueur', teamName(t, w)) : ''}
+        ${w !== null ? kv('Vainqueur', teamName(t, w), 'kv-win') : ''}
         ${progressHTML(t)}
         <div class="t-card-actions">
           <a class="btn btn-outline t-card-link" href="#/t/${t.id}">Voir le tournoi</a>
@@ -1149,7 +1247,8 @@
     const tabs = t.type === 'elim'
       ? [['bracket', 'Tableau'], ['matches', 'Matchs']]
       : [['standings', 'Classement'], ['matches', 'Matchs']];
-    const meta = [t.shared ? 'Reçu via un lien' : '', domainLabel(t), t.venue, t.location, fmtDate(t.date), countLabel(t, t.teams.length), formatLabel(t)].filter(Boolean).join(' · ');
+    const meta = [t.shared ? 'Reçu via un lien' : '', t.venue, t.location, t.date ? fmtDate(t.date) : '', countLabel(t, t.teams.length), scoreLabel(t)].filter(Boolean);
+    const kicker = [t.type === 'elim' ? 'Éliminatoire' : 'Championnat', domainLabel(t)].filter(Boolean).join(' · ');
 
     // Les deux vues sont rendues : sur mobile, les onglets n'en montrent qu'une ;
     // sur ordinateur, elles s'affichent ensemble (tableau puis matchs, ou classement à côté des matchs).
@@ -1163,7 +1262,7 @@
       : pane('standings', 'Classement', standingsHTML(t)) + pane('matches', 'Matchs', leagueMatchesHTML(t, u));
 
     app.innerHTML = `
-      <div class="page page-tournament page-${t.type}">
+      <div class="page page-tournament page-${t.type} cat-${catOf(t)}">
         <header class="topbar">
           <a href="#/" class="back">${ICON.left}Mes tournois</a>
           <div class="topbar-right">
@@ -1172,7 +1271,11 @@
           </div>
         </header>
         <div class="t-head">
-          <div><h1 class="h1">${esc(t.name)}</h1><p class="muted">${esc(meta)}</p></div>
+          <div class="t-head-main">
+            <span class="t-kicker">${FX.glyph(glyphOf(t))}<span>${esc(kicker)}</span></span>
+            <h1 class="h1">${esc(t.name)}</h1>
+            <div class="t-meta">${meta.map((x) => `<span>${esc(x)}</span>`).join('')}</div>
+          </div>
           ${ro ? `<span class="badge badge-${s}">${STATUS[s]}</span>` : `
           <label class="status-pick badge badge-${s}" title="Changer le statut du tournoi">
             <span class="sr-only">Statut du tournoi</span>
@@ -1477,10 +1580,11 @@
           <h1 class="h1">Un ami t’a partagé un tournoi</h1>
           <p class="lead">Ajoute-le à tes tournois pour voir le tableau, les matchs et le classement.</p>
         </div>
-        <article class="t-card shared-card">
+        <article class="t-card shared-card" style="--a1:${accentOf(t)[0]};--a2:${accentOf(t)[1]}">
+          <span class="t-card-art" aria-hidden="true">${FX.glyph(glyphOf(t))}</span>
           <div class="t-card-head"><h2>${esc(t.name)}</h2><span class="badge badge-${s}">${STATUS[s]}</span></div>
+          ${t.discipline ? `<span class="t-card-tag"><i aria-hidden="true">${FX.glyph(glyphOf(t))}</i><span>${esc(domainLabel(t))}</span></span>` : ''}
           <div class="divider"></div>
-          ${t.discipline ? kv('Domaine', domainLabel(t)) : ''}
           ${kv('Lieu', t.location || '—')}
           ${t.venue ? kv('Salle / stade', t.venue) : ''}
           ${kv('Date', fmtDate(t.date))}
@@ -2183,7 +2287,7 @@
   function scoreFx(el, diff, side, quick) {
     if (!el) return;
     FX.pop(el);
-    if (diff) FX.delta(el, `${diff > 0 ? '+' : '−'}${Math.abs(diff)}`, side === 'sa' ? '#1E9FAB' : '#A0228F');
+    if (diff) FX.delta(el, `${diff > 0 ? '+' : '−'}${Math.abs(diff)}`, side === 'sa' ? '#00B4D8' : '#E21FA0');
     if (quick && diff) FX.sparks(el, quick === 'max' ? 14 : 8);
   }
 

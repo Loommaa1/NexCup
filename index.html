@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NexCup – Tournois sport &amp; e-sport</title>
   <meta name="description" content="NexCup : crée et gère tes tournois de sport et d’e-sport (éliminatoire, championnat, scores, classement).">
-  <meta name="theme-color" content="#7A1A80">
+  <meta name="theme-color" content="#7B3FF2">
   <link rel="icon" type="image/png" href="assets/logo/favicon.png">
   <link rel="apple-touch-icon" href="assets/logo/apple-touch-icon.png">
   <script>
@@ -17,19 +17,38 @@
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/scenes.css">
 </head>
 <body>
+  <!-- Fond animé : aurores colorées, projecteurs, grille au sol, icônes qui flottent (ajoutées par js/fx.js) -->
+  <div class="bg-fx" aria-hidden="true">
+    <span class="bg-blob bg-blob-1"></span>
+    <span class="bg-blob bg-blob-2"></span>
+    <span class="bg-blob bg-blob-3"></span>
+    <span class="bg-blob bg-blob-4"></span>
+    <span class="bg-blob bg-blob-5"></span>
+    <span class="bg-dots"></span>
+    <span class="bg-beam bg-beam-1"></span>
+    <span class="bg-beam bg-beam-2"></span>
+    <span class="bg-floor"></span>
+    <div class="bg-icons"></div>
+  </div>
+
   <main id="app"></main>
   <dialog id="scoreDialog"></dialog>
   <dialog id="confirmDialog" class="confirm-dialog"></dialog>
   <dialog id="editDialog" class="edit-dialog"></dialog>
   <div id="toasts" class="toasts" aria-live="polite"></div>
-  <!-- Transition entre les pages (bandes + logo) -->
+  <!-- Transition entre les pages (bandes de couleur + logo) -->
   <div id="pageTransition" class="pt is-active is-covered is-intro" aria-hidden="true">
     <span class="pt-band pt-band-1"></span>
     <span class="pt-band pt-band-2"></span>
     <span class="pt-band pt-band-3"></span>
+    <span class="pt-band pt-band-4"></span>
+    <span class="pt-band pt-band-5"></span>
     <div class="pt-label">
       <img class="pt-logo" src="assets/logo/nexcup-logo.png" alt="" width="736" height="900">
       <span class="pt-line"></span>
