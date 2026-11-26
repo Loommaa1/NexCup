@@ -153,14 +153,14 @@ const Guide = (() => {
   const burstHTML = (n, minD, maxD, colors = COLORS) =>
     Array.from({ length: n }, (_, i) => {
       const a = (i / n) * 360 + rnd(0, 10);
-      return `<span class="c-confetti" style="--a:${a}deg;--dist:${rnd(minD, maxD)}vmin;--c:${colors[i % colors.length]};--r:${rnd(-450, 450)}deg;--w:${rnd(0.9, 2)}vmin"></span>`;
+      return `<span class="c-confetti" style="--a:${a}deg;--dist:calc(${rnd(minD, maxD)} * var(--u));--c:${colors[i % colors.length]};--r:${rnd(-450, 450)}deg;--w:calc(${rnd(0.9, 2)} * var(--u))"></span>`;
     }).join('');
 
   // Un nuage = une forme arrondie + deux « bosses » (::before / ::after)
   const cloudsHTML = (n, minW, maxW) =>
-    Array.from({ length: n }, () => `<span class="c-cloud" style="left:${rnd(-15, 95)}%;top:${rnd(0, 90)}%;--w:${rnd(minW, maxW)}vmin;--o:${rnd(0.55, 0.95)}"></span>`).join('');
+    Array.from({ length: n }, () => `<span class="c-cloud" style="left:${rnd(-15, 95)}%;top:${rnd(0, 90)}%;--w:calc(${rnd(minW, maxW)} * var(--u));--o:${rnd(0.55, 0.95)}"></span>`).join('');
   const starsHTML = (n) =>
-    Array.from({ length: n }, () => `<span class="c-star" style="left:${rnd(0, 100)}%;top:${rnd(0, 100)}%;--s:${rnd(0.5, 1.8)}vmin;--d:${rnd(0, 1.5).toFixed(2)}s"></span>`).join('');
+    Array.from({ length: n }, () => `<span class="c-star" style="left:${rnd(0, 100)}%;top:${rnd(0, 100)}%;--s:calc(${rnd(0.5, 1.8)} * var(--u));--d:${rnd(0, 1.5).toFixed(2)}s"></span>`).join('');
 
   // Scène 1 : décollage à travers les nuages
   function sceneLaunch() {
@@ -192,7 +192,7 @@ const Guide = (() => {
   function sceneDuel() {
     const pips = (side) =>
       `<div class="d-pips d-pips-${side}">${Array.from({ length: 5 }, (_, i) => `<span style="--i:${i}"></span>`).join('')}</div>`;
-    const bolts = Array.from({ length: 8 }, (_, i) => `<span class="d-bolt" style="--a:${i * 45 + rnd(-12, 12)}deg;--l:${rnd(28, 46)}vmin"></span>`).join('');
+    const bolts = Array.from({ length: 8 }, (_, i) => `<span class="d-bolt" style="--a:${i * 45 + rnd(-12, 12)}deg;--l:calc(${rnd(28, 46)} * var(--u))"></span>`).join('');
     const tail = (c) => Array.from({ length: 10 }, (_, i) => `<span style="--i:${i};--c:${c}"></span>`).join('');
     return `
       <div class="scene scene-duel">

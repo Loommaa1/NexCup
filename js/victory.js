@@ -26,7 +26,7 @@ const Victory = (() => {
       const n = theme === 'game' ? 16 : 22;
       return `<div class="v-fw" style="left:${x}%;top:${y}%;--d:${d}s;--c:${c}">
         <span class="v-fw-core"></span>
-        ${times(n, (i) => `<span style="--a:${(i / n) * 360}deg;--dist:${rnd(11, 17).toFixed(1)}vmin"></span>`)}
+        ${times(n, (i) => `<span style="--a:${(i / n) * 360}deg;--dist:calc(${rnd(11, 17).toFixed(1)} * var(--u))"></span>`)}
       </div>`;
     }).join('');
   }
@@ -34,7 +34,7 @@ const Victory = (() => {
   function confettiHTML(theme) {
     const colors = theme === 'game' ? NEON : BRAND.concat(GOLD);
     return times(theme === 'game' ? 70 : 90, (i) =>
-      `<span style="left:${rnd(0, 100).toFixed(1)}%;--c:${pick(colors, i)};--d:${rnd(2.6, 8).toFixed(2)}s;--t:${rnd(2.2, 3.6).toFixed(2)}s;--x:${rnd(-10, 10).toFixed(1)}vw;--r:${rnd(-720, 720).toFixed(0)}deg;--w:${rnd(0.8, 1.6).toFixed(2)}vmin"></span>`);
+      `<span style="left:${rnd(0, 100).toFixed(1)}%;--c:${pick(colors, i)};--d:${rnd(2.6, 8).toFixed(2)}s;--t:${rnd(2.2, 3.6).toFixed(2)}s;--x:${rnd(-10, 10).toFixed(1)}vw;--r:${rnd(-720, 720).toFixed(0)}deg;--w:calc(${rnd(0.8, 1.6).toFixed(2)} * var(--u))"></span>`);
   }
 
   function sportHTML() {
@@ -53,7 +53,7 @@ const Victory = (() => {
       <div class="vg-sun"></div>
       <div class="vg-grid"></div>
       <div class="vg-lasers">${times(6, (i) => `<span style="--i:${i};--c:${pick(NEON, i)};--from:${-40 + i * 16}deg"></span>`)}</div>
-      <div class="vg-pixels">${times(40, (i) => `<span style="left:${rnd(0, 100).toFixed(1)}%;--c:${pick(NEON, i)};--d:${rnd(0.5, 9).toFixed(2)}s;--t:${rnd(2, 4).toFixed(2)}s;--s:${rnd(0.6, 1.6).toFixed(2)}vmin"></span>`)}</div>
+      <div class="vg-pixels">${times(40, (i) => `<span style="left:${rnd(0, 100).toFixed(1)}%;--c:${pick(NEON, i)};--d:${rnd(0.5, 9).toFixed(2)}s;--t:${rnd(2, 4).toFixed(2)}s;--s:calc(${rnd(0.6, 1.6).toFixed(2)} * var(--u))"></span>`)}</div>
       <div class="vg-hud"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span></div>
       <div class="vg-rings"><span></span><span></span><span></span></div>
       <div class="vg-scan"></div>`;

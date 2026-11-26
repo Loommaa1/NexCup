@@ -17,9 +17,19 @@ const CreateAnim = (() => {
     const extra = teams.length - shown.length;
     const labels = extra > 0 ? [...shown.slice(0, MAX_CHIPS - 1), `+${extra + 1}`] : shown;
     const n = labels.length;
+    // Sur un téléphone en hauteur, la carte occupe toute la largeur : les équipes posées à gauche et
+    // à droite seraient cachées derrière. On les répartit alors sur deux arcs, au-dessus et en dessous.
+    const portrait = window.matchMedia('(orientation: portrait) and (max-width: 760px)').matches;
+    const top = Math.ceil(n / 2);
+    const arc = (k, count, from, to) => (count === 1 ? (from + to) / 2 : from + (k / (count - 1)) * (to - from));
+    const deg = Math.PI / 180;
+    const angle = (i) => {
+      if (!portrait || n < 3) return (i / n) * Math.PI * 2 - Math.PI / 2; // départ en haut, sens horaire
+      return i < top ? arc(i, top, -150, -30) * deg : arc(i - top, n - top, 30, 150) * deg;
+    };
     return labels
       .map((name, i) => {
-        const a = (i / n) * Math.PI * 2 - Math.PI / 2; // départ en haut, sens horaire
+        const a = angle(i);
         // position finale sur une ellipse (plus large que haute pour tenir sur ordinateur et mobile)
         const x = Math.cos(a);
         const y = Math.sin(a);
@@ -33,7 +43,7 @@ const CreateAnim = (() => {
   function confettiHTML(n) {
     return Array.from({ length: n }, (_, i) => {
       const a = (i / n) * 360 + rnd(0, 10);
-      return `<span class="ca-confetti" style="--a:${a}deg;--dist:${rnd(28, 70)}vmin;--c:${COLORS[i % COLORS.length]};--r:${rnd(-500, 500)}deg;--w:${rnd(0.9, 2)}vmin"></span>`;
+      return `<span class="ca-confetti" style="--a:${a}deg;--dist:calc(${rnd(28, 70)} * var(--u));--c:${COLORS[i % COLORS.length]};--r:${rnd(-500, 500)}deg;--w:calc(${rnd(0.9, 2)} * var(--u))"></span>`;
     }).join('');
   }
 
