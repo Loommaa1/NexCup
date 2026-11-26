@@ -1127,6 +1127,10 @@
     return { tab: T.status(t) === 'upcoming' ? 'matches' : 'standings', phase, dayIdx: firstOpenDay(t, phase) };
   }
 
+  // Un tournoi reçu via un lien de partage ne se modifie pas : seul son créateur peut le faire.
+  const isReadOnly = (t) => !!(t && t.shared);
+  const EDIT_ACTIONS = new Set(['edit', 'score', 'toggle', 'lstep', 'lquick']);
+
   function renderTournament(id) {
     const t = Store.get(id);
     if (!t) {
@@ -1135,6 +1139,7 @@
     }
     const u = ui[id] || (ui[id] = initUi(t));
     const s = T.status(t);
+    const ro = isReadOnly(t); // tournoi reçu via un lien : consultation seulement
     const tabs = t.type === 'elim'
       ? [['bracket', 'Tableau'], ['matches', 'Matchs']]
       : [['standings', 'Classement'], ['matches', 'Matchs']];
@@ -1162,6 +1167,7 @@
         </header>
         <div class="t-head">
           <div><h1 class="h1">${esc(t.name)}</h1><p class="muted">${esc(meta)}</p></div>
+          ${ro ? `<span class="badge badge-${s}">${STATUS[s]}</span>` : `
           <label class="status-pick badge badge-${s}" title="Changer le statut du tournoi">
             <span class="sr-only">Statut du tournoi</span>
             <select data-status-select aria-label="Statut du tournoi">
@@ -1169,11 +1175,11 @@
               ${['upcoming', 'live', 'done'].map((k) => `<option value="${k}" ${t.statusOverride === k ? 'selected' : ''}>${STATUS[k]}</option>`).join('')}
             </select>
             ${ICON.chevron}
-          </label>
+          </label>`}
         </div>
         <div class="t-actions" role="toolbar" aria-label="Actions du tournoi">
           <button type="button" class="btn btn-ghost btn-sm t-actions-share" data-action="share">${ICON.share}Partager</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-action="edit">${ICON.edit}Modifier</button>
+          ${ro ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-action="edit">${ICON.edit}Modifier</button>`}
           <button type="button" class="btn btn-ghost btn-sm" data-action="duplicate">${ICON.copy}Dupliquer</button>
           <button type="button" class="btn btn-ghost btn-sm" data-action="fullscreen">${ICON.expand}Plein écran</button>
           <button type="button" class="btn btn-ghost btn-sm" data-action="export-one">${ICON.download}Exporter</button>
@@ -1189,6 +1195,14 @@
                </section>`
             : ''
         }
+        ${
+          ro
+            ? `<section class="readonly-banner" role="note">
+                 <span class="readonly-banner-ico" aria-hidden="true">🔒</span>
+                 <div><strong>Tournoi partagé : lecture seule</strong><span>Tu peux le consulter, mais pas modifier les scores ni les réglages. Demande un nouveau lien pour avoir les derniers résultats.</span></div>
+               </section>`
+            : ''
+        }
         ${podiumHTML(t)}
         ${nextMatchHTML(t)}
         <div class="segmented t-tabs" role="tablist">
@@ -1201,6 +1215,10 @@
       const el = e.target.closest('[data-action]');
       if (!el) return;
       const a = el.dataset.action;
+      if (ro && EDIT_ACTIONS.has(a)) {
+        toast('Ce tournoi partagé est en lecture seule.', 'error');
+        return;
+      }
       if (a === 'tab') {
         u.tab = el.dataset.tab;
         renderTournament(id);
@@ -1266,12 +1284,13 @@
     // Score du championnat tapé au clavier
     app.oninput = (e) => {
       const el = e.target;
-      if (!el.classList.contains('l-score')) return;
+      if (ro || !el.classList.contains('l-score')) return;
       const v = parseInt(el.value, 10);
       setLeagueScore(t, u, +el.dataset.k, el.dataset.side, { value: Number.isNaN(v) ? null : v });
     };
     app.onchange = (e) => {
       const el = e.target;
+      if (ro) return;
       // Statut du tournoi choisi à la main (ou « Automatique » : selon les matchs joués)
       if (el.matches('[data-status-select]')) {
         t.statusOverride = el.value === 'auto' ? null : el.value;
@@ -1511,7 +1530,7 @@
     const live = m.status === 'live';
     const where = t.type === 'elim' ? T.matchName(t, n.r) : `Journée ${n.day.n}`;
     let btn;
-    if (t.type === 'elim') btn = `<button type="button" class="btn btn-primary btn-sm" data-action="score" data-r="${n.r}" data-i="${n.i}">Saisir le score</button>`;
+    if (t.type === 'elim') btn = isReadOnly(t) ? '' : `<button type="button" class="btn btn-primary btn-sm" data-action="score" data-r="${n.r}" data-i="${n.i}">Saisir le score</button>`;
     else {
       const idx = t.days.filter((d) => d.phase === n.day.phase).indexOf(n.day);
       btn = `<button type="button" class="btn btn-primary btn-sm" data-action="goto-day" data-phase="${n.day.phase}" data-idx="${idx}">Aller à la journée</button>`;
@@ -1531,6 +1550,7 @@
   /* ---------------- Modifier un tournoi ---------------- */
 
   function openEditDialog(t) {
+    if (isReadOnly(t)) return;
     const editDialog = document.getElementById('editDialog');
     editDialog.innerHTML = `
       <form class="dlg" method="dialog">
@@ -1655,7 +1675,7 @@
                </div>`
             : ''
         }
-        <p class="board-help">Clique sur un match pour saisir le score. Le gagnant passe automatiquement au tour suivant.</p>
+        ${isReadOnly(t) ? '' : '<p class="board-help">Clique sur un match pour saisir le score. Le gagnant passe automatiquement au tour suivant.</p>'}
       </div>`;
   }
 
@@ -1670,6 +1690,15 @@
       return `<span class="slot ${cls}"><span class="slot-name">${esc(teamName(t, id))}</span><span class="slot-score">${score ?? '–'}</span></span>`;
     };
     const playable = m.a !== null && m.b !== null;
+    if (isReadOnly(t)) {
+      return `
+      <div class="match-wrap">
+        <div class="bm bm-${m.status} is-readonly">
+          ${slot(m.a, m.sa, 'a')}${slot(m.b, m.sb, 'b')}
+          ${m.status === 'live' ? '<span class="bm-live">En cours</span>' : ''}
+        </div>
+      </div>`;
+    }
     const label = playable ? `${teamName(t, m.a)} contre ${teamName(t, m.b)} : saisir le score` : 'Match en attente';
     return `
       <div class="match-wrap">
@@ -1703,7 +1732,7 @@
             <span class="vs">${m.status === 'live' ? `${m.sa ?? 0} – ${m.sb ?? 0}` : 'vs'}</span>
             <span class="team-name team-away">${esc(teamName(t, m.b))}</span>
           </div>
-          <button type="button" class="btn btn-outline btn-sm" data-action="score" data-r="${r}" data-i="${i}">Saisir le score</button>
+          ${isReadOnly(t) ? '' : `<button type="button" class="btn btn-outline btn-sm" data-action="score" data-r="${r}" data-i="${i}">Saisir le score</button>`}
         </div>`
       )
       .join('');
@@ -1722,7 +1751,7 @@
           <div class="match-meta">
             <span class="points-text"><span class="chip chip-win">Gagnant</span> ${esc(teamName(t, m.winner))}
               &nbsp;<span class="chip chip-lose">Perdant</span> ${esc(teamName(t, aWin ? m.b : m.a))}</span>
-            <button type="button" class="btn btn-ghost btn-sm" data-action="score" data-r="${r}" data-i="${i}">Modifier</button>
+            ${isReadOnly(t) ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-action="score" data-r="${r}" data-i="${i}">Modifier</button>`}
           </div>
         </div>`;
       })
@@ -1750,6 +1779,7 @@
   /* ---------------- Élimination : saisie du score ---------------- */
 
   function openScoreDialog(t, r, i) {
+    if (isReadOnly(t)) return;
     const m = T.getMatch(t, r, i);
     if (m.a === null || m.b === null) return;
     const need = T.winsNeeded(t);
@@ -1965,8 +1995,10 @@
     return `${m.status === 'live' ? 'Provisoire · ' : ''}+${pa} / +${pb} pts`;
   }
 
-  const toggleHTML = (m, k) =>
-    `<button type="button" class="status-toggle st-${m.status}" data-action="toggle" data-k="${k}"><span class="status-dot"></span>${MATCH_STATUS[m.status]}</button>`;
+  const toggleHTML = (m, k, ro) =>
+    ro
+      ? `<span class="status-toggle st-${m.status} is-readonly"><span class="status-dot"></span>${MATCH_STATUS[m.status]}</span>`
+      : `<button type="button" class="status-toggle st-${m.status}" data-action="toggle" data-k="${k}"><span class="status-dot"></span>${MATCH_STATUS[m.status]}</button>`;
 
   function leagueMatchesHTML(t, u) {
     const days = phaseDays(t, u);
@@ -1998,16 +2030,16 @@
           <div class="match-row" data-k="${k}">
             ${leagueLine(t, m, k, 'sa')}
             ${leagueLine(t, m, k, 'sb')}
-            <div class="match-meta"><span class="points-text">${ptsText(t, m)}</span>${toggleHTML(m, k)}</div>
+            <div class="match-meta"><span class="points-text">${ptsText(t, m)}</span>${toggleHTML(m, k, isReadOnly(t))}</div>
           </div>`
           )
           .join('')}
         ${day.rest !== null ? `<div class="rest">Exempt cette journée : <b>${esc(teamName(t, day.rest))}</b></div>` : ''}
       </div>
       ${pointsBanner(t)}
-      <p class="helper">Utilise les boutons <b>+</b> / <b>−</b>${T.scoreMax(t) !== null ? `, <b>½</b> (ajoute ${Math.max(1, Math.floor(T.scoreMax(t) / 2))}) et <b>Max</b> (${T.isWinBy2(t) ? 'score gagnant' : T.scoreMax(t)})` : ''} ou tape le score.
+      ${isReadOnly(t) ? '' : `<p class="helper">Utilise les boutons <b>+</b> / <b>−</b>${T.scoreMax(t) !== null ? `, <b>½</b> (ajoute ${Math.max(1, Math.floor(T.scoreMax(t) / 2))}) et <b>Max</b> (${T.isWinBy2(t) ? 'score gagnant' : T.scoreMax(t)})` : ''} ou tape le score.
         ${T.isWinBy2(t) ? `Match en ${T.scoreMax(t)} points avec <b>2 points d’écart</b> : le match n’est marqué <b>Fini</b> qu’avec un score gagnant valide.` : ''} Clique sur le badge pour passer de <b>À venir</b> à <b>En cours</b> puis <b>Fini</b>.
-        ${t.homeAway ? ' Les matchs retour reprennent les mêmes rencontres, domicile et extérieur inversés.' : ''}</p>`;
+        ${t.homeAway ? ' Les matchs retour reprennent les mêmes rencontres, domicile et extérieur inversés.' : ''}</p>`}`;
   }
 
   function currentDay(t, u) {
@@ -2025,6 +2057,14 @@
     const lead = v !== null && other !== null && v > other;
     const cap = leagueCap(t, m, side);
     const full = v !== null && v >= cap;
+    if (isReadOnly(t)) {
+      return `
+      <div class="l-line ${lead ? 'is-lead' : ''}" data-line="${side}">
+        <span class="l-side side-${side === 'sa' ? 'a' : 'b'}" aria-hidden="true"></span>
+        <span class="l-name">${name}</span>
+        <span class="l-score-ro" aria-label="Score de ${name}">${v ?? '–'}</span>
+      </div>`;
+    }
     return `
       <div class="l-line ${lead ? 'is-lead' : ''}" data-line="${side}">
         <span class="l-side side-${side === 'sa' ? 'a' : 'b'}" aria-hidden="true"></span>
@@ -2042,6 +2082,7 @@
 
   // Change le score d'une équipe : `how` = { step } (+1 / −1), { quick: 'half' | 'max' } ou { value } (saisi au clavier).
   function setLeagueScore(t, u, k, side, how) {
+    if (isReadOnly(t)) return;
     const day = currentDay(t, u);
     const m = day.matches[k];
     const otherSide = side === 'sa' ? 'sb' : 'sa';
@@ -2100,6 +2141,7 @@
   }
 
   function toggleLeagueMatch(t, u, k) {
+    if (isReadOnly(t)) return;
     const m = currentDay(t, u).matches[k];
     const wasDone = T.autoStatus(t) === 'done';
     if (m.status === 'live') {

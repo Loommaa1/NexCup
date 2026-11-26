@@ -1445,6 +1445,20 @@ dialog[open]::backdrop { animation: fadeIn .2s ease-out; }
 .share-banner div { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .share-banner span { font-size: 13px; color: var(--muted); }
 .share-banner .btn { gap: 6px; flex-shrink: 0; }
+
+/* tournoi reçu via un lien : lecture seule */
+.readonly-banner {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 14px;
+  background: var(--surface); border: 1px dashed var(--border);
+}
+.readonly-banner-ico { font-size: 22px; }
+.readonly-banner div { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.readonly-banner span { font-size: 13px; color: var(--muted); }
+.bm.is-readonly, .status-toggle.is-readonly { cursor: default; }
+.l-score-ro {
+  min-width: 56px; height: 40px; display: inline-flex; align-items: center; justify-content: center; margin-left: auto;
+  color: var(--ink); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
 .share-banner-close { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; }
 
 /* page d'arrivée d'un lien partagé */
