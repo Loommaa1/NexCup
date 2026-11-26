@@ -225,7 +225,7 @@ const Disciplines = (() => {
   }
 
   async function searchRoblox(query, signal) {
-    const url = `https://apis.roproxy.com/search-api/omni-search?searchQuery=${encodeURIComponent(query.trim())}&pageType=all&sessionId=arena`;
+    const url = `https://apis.roproxy.com/search-api/omni-search?searchQuery=${encodeURIComponent(query.trim())}&pageType=all&sessionId=nexcup`;
     const res = await fetch(url, { signal });
     if (!res.ok) throw new Error('Roblox indisponible');
     const data = await res.json();

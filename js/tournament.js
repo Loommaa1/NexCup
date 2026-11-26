@@ -39,12 +39,18 @@ const T = (() => {
       type: opts.type, // 'elim' | 'league'
       random: opts.random,
       homeAway: opts.type === 'league' && opts.homeAway,
+      // Championnat : points attribués (victoire / nul / défaite), réglables
+      points: opts.type === 'league' ? { ...POINTS, ...(opts.points || {}) } : null,
+      // Éliminatoire : match pour la 3e place entre les perdants des demi-finales
+      thirdPlace: opts.type === 'elim' && !!opts.thirdPlace && names.length >= 4,
+      entrant: opts.entrant === 'player' ? 'player' : 'team', // équipes ou participants (joueurs seuls)
       teams: names.map((name, id) => ({ id, name })),
       createdAt: Date.now(),
     };
 
     if (t.type === 'elim') {
       t.rounds = buildBracket(t.teams.length);
+      if (t.thirdPlace) t.third = emptyMatch();
       refreshBracket(t);
     } else {
       t.days = buildSchedule(t.teams.length, t.homeAway);
@@ -90,21 +96,31 @@ const T = (() => {
   // les matchs suivants concernés sont réinitialisés.
   function refreshBracket(t) {
     const R = t.rounds;
+    const place = (m, na, nb) => {
+      if (m.a !== na || m.b !== nb) {
+        Object.assign(m, { a: na, b: nb, sa: null, sb: null, winner: null });
+        m.status = na !== null && nb !== null ? 'upcoming' : 'pending';
+      }
+    };
     for (let r = 1; r < R.length; r++) {
-      R[r].forEach((m, i) => {
-        const na = R[r - 1][2 * i].winner;
-        const nb = R[r - 1][2 * i + 1].winner;
-        if (m.a !== na || m.b !== nb) {
-          Object.assign(m, { a: na, b: nb, sa: null, sb: null, winner: null });
-          m.status = na !== null && nb !== null ? 'upcoming' : 'pending';
-        }
-      });
+      R[r].forEach((m, i) => place(m, R[r - 1][2 * i].winner, R[r - 1][2 * i + 1].winner));
+    }
+    // Petite finale : les deux perdants des demi-finales
+    if (t.third && R.length >= 2) {
+      const semis = R[R.length - 2];
+      const loser = (m) => (m.status === 'done' ? (m.winner === m.a ? m.b : m.a) : null);
+      place(t.third, loser(semis[0]), loser(semis[1]));
     }
   }
 
+  // Un match du tableau ; r = -1 désigne le match pour la 3e place
+  const THIRD = -1;
+  const getMatch = (t, r, i) => (r === THIRD ? t.third : t.rounds[r][i]);
+  const matchName = (t, r) => (r === THIRD ? 'Match pour la 3e place' : roundName(t.rounds[r].length));
+
   function roundName(matchCount) {
     return (
-      { 1: 'Finale', 2: 'Demi-finales', 4: 'Quarts de finale', 8: 'Huitièmes de finale', 16: 'Seizièmes de finale' }[matchCount] ||
+      { 1: 'Finale', 2: 'Demi-finales', 4: 'Quarts de finale', 8: 'Huitièmes de finale', 16: 'Seizièmes de finale', 32: 'Trente-deuxièmes de finale' }[matchCount] ||
       `Tour à ${matchCount * 2}`
     );
   }
@@ -159,7 +175,7 @@ const T = (() => {
   function setElimResult(t, r, i, sa, sb) {
     const err = validateFinal(t, sa, sb);
     if (err) return err;
-    const m = t.rounds[r][i];
+    const m = getMatch(t, r, i);
     Object.assign(m, { sa, sb, winner: sa > sb ? m.a : m.b, status: 'done' });
     refreshBracket(t);
     return null;
@@ -177,14 +193,14 @@ const T = (() => {
     if (need !== null && ((sa ?? 0) >= need || (sb ?? 0) >= need)) {
       return `Une équipe a déjà ${need} manches : clique plutôt sur « Valider le résultat ».`;
     }
-    const m = t.rounds[r][i];
+    const m = getMatch(t, r, i);
     Object.assign(m, { sa, sb, winner: null, status: 'live' });
     refreshBracket(t);
     return null;
   }
 
   function resetElim(t, r, i) {
-    Object.assign(t.rounds[r][i], { sa: null, sb: null, winner: null, status: 'upcoming' });
+    Object.assign(getMatch(t, r, i), { sa: null, sb: null, winner: null, status: 'upcoming' });
     refreshBracket(t);
   }
 
@@ -229,10 +245,12 @@ const T = (() => {
     return days;
   }
 
-  function points(sa, sb) {
-    if (sa > sb) return [POINTS.win, POINTS.loss];
-    if (sa < sb) return [POINTS.loss, POINTS.win];
-    return [POINTS.draw, POINTS.draw];
+  const pointsOf = (t) => (t && t.points) || POINTS;
+  function points(sa, sb, t) {
+    const P = pointsOf(t);
+    if (sa > sb) return [P.win, P.loss];
+    if (sa < sb) return [P.loss, P.win];
+    return [P.draw, P.draw];
   }
 
   function standings(t) {
@@ -242,7 +260,7 @@ const T = (() => {
         if (m.status !== 'done') return;
         const h = rows[m.a];
         const a = rows[m.b];
-        const [ph, pa] = points(m.sa, m.sb);
+        const [ph, pa] = points(m.sa, m.sb, t);
         h.j++; a.j++;
         h.gf += m.sa; h.ga += m.sb;
         a.gf += m.sb; a.ga += m.sa;
@@ -259,10 +277,15 @@ const T = (() => {
 
   /* ---------------- État global ---------------- */
 
+  // Statut choisi à la main (À venir / En cours / Terminé) ; sinon calculé d'après les matchs
   function status(t) {
+    return t.statusOverride || autoStatus(t);
+  }
+
+  function autoStatus(t) {
     if (t.type === 'elim') {
-      if (winner(t) !== null) return 'done';
-      return t.rounds.flat().some((m) => m.status === 'live' || m.status === 'done') ? 'live' : 'upcoming';
+      if (winner(t) !== null && (!t.third || t.third.winner !== null)) return 'done';
+      return allMatches(t).some((m) => m.status === 'live' || m.status === 'done') ? 'live' : 'upcoming';
     }
     const ms = t.days.flatMap((d) => d.matches);
     if (ms.length && ms.every((m) => m.status === 'done')) return 'done';
@@ -275,8 +298,48 @@ const T = (() => {
     return ms.length && ms.every((m) => m.status === 'done') ? standings(t)[0].id : null;
   }
 
+  // Tous les matchs d'un éliminatoire, petite finale comprise
+  const allMatches = (t) => (t.third ? [...t.rounds.flat(), t.third] : t.rounds.flat());
+
+  // Podium [1er, 2e, 3e] (ids d'équipes, null si pas encore connu) — une fois le tournoi terminé
+  function podium(t) {
+    if (autoStatus(t) !== 'done') return null; // le podium n'existe que si tous les matchs sont joués
+    if (t.type === 'league') return standings(t).slice(0, 3).map((r) => r.id);
+    const final = t.rounds[t.rounds.length - 1][0];
+    const second = final.winner === final.a ? final.b : final.a;
+    return [final.winner, second, t.third ? t.third.winner : null];
+  }
+
+  // Prochain match à jouer (en cours d'abord, puis à venir)
+  function nextMatch(t) {
+    if (t.type === 'elim') {
+      const list = [];
+      t.rounds.forEach((round, r) => round.forEach((m, i) => list.push({ m, r, i })));
+      if (t.third) list.splice(list.length - 1, 0, { m: t.third, r: THIRD, i: 0 }); // avant la finale
+      return list.find((x) => x.m.status === 'live') || list.find((x) => x.m.status === 'upcoming') || null;
+    }
+    for (const day of t.days) {
+      const k = day.matches.findIndex((m) => m.status !== 'done');
+      if (k >= 0) return { m: day.matches[k], day, k };
+    }
+    return null;
+  }
+
+  // Copie d'un tournoi (mêmes réglages et équipes, scores remis à zéro)
+  function duplicate(t) {
+    return create({
+      ...t,
+      name: `${t.name} (copie)`,
+      teamNames: t.teams.map((tm) => tm.name),
+      random: false,
+      discipline: t.discipline,
+      points: t.points,
+      thirdPlace: !!t.thirdPlace,
+    });
+  }
+
   return {
-    POINTS, create, roundName, winsNeeded, scoreMax, isPts, isWinBy2, capFor, validateFinal,
+    POINTS, THIRD, autoStatus, create, getMatch, matchName, pointsOf, podium, nextMatch, duplicate, allMatches, roundName, winsNeeded, scoreMax, isPts, isWinBy2, capFor, validateFinal,
     setElimResult, setElimLive, resetElim,
     points, standings, status, winner,
   };
