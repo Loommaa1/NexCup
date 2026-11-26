@@ -357,7 +357,13 @@
         return toast('Sauvegarde téléchargée');
       }
       const b = e.target.closest('[data-action="delete-card"]');
-      if (!b) return;
+      if (!b) {
+        // Un clic n'importe où sur la carte ouvre le tournoi (sauf sur un autre bouton ou lien)
+        const card = e.target.closest('.cards .t-card');
+        const link = card && card.querySelector('.t-card-link');
+        if (link && !e.target.closest('a, button') && !String(window.getSelection())) location.hash = link.getAttribute('href');
+        return;
+      }
       const t = Store.get(b.dataset.id);
       if (t && (await askDelete(t))) {
         const card = b.closest('.t-card');
@@ -403,7 +409,7 @@
         ${w !== null ? kv('Vainqueur', teamName(t, w)) : ''}
         ${progressHTML(t)}
         <div class="t-card-actions">
-          <a class="btn btn-outline" href="#/t/${t.id}">Voir le tournoi</a>
+          <a class="btn btn-outline t-card-link" href="#/t/${t.id}">Voir le tournoi</a>
           ${s === 'done' ? `<button type="button" class="btn btn-danger" data-action="delete-card" data-id="${t.id}" aria-label="Supprimer ${esc(t.name)}">${ICON.trash}Supprimer</button>` : ''}
         </div>
       </article>`;
