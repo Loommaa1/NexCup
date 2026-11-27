@@ -91,9 +91,15 @@ const Guide = (() => {
   }
 
   function go(i, burst = true) {
-    if (i < 0 || i >= STEPS.length) return;
+    if (i < 0 || i >= STEPS.length || i === index) return;
+    // Changer d'étape rejoue la cinématique de la nouvelle étape, puis rouvre le guide
     index = i;
-    render(burst);
+    if (dlg.open) dlg.close();
+    playCinematic(SCENES[i], () => {
+      render(burst);
+      dlg.showModal();
+      dlg.querySelector('.g-tabs .on').focus({ preventScroll: true });
+    });
   }
 
   function build() {
