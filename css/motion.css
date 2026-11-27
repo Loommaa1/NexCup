@@ -129,7 +129,22 @@
 dialog[open] { animation: dlgIn .45s var(--ease-spring); }
 dialog[open]::backdrop { animation: fadeIn .25s ease-out; }
 @keyframes dlgIn { from { opacity: 0; transform: translateY(26px) scale(.9); } to { opacity: 1; transform: none; } }
-.guide-dialog[open] { animation: guideIn .6s var(--ease-spring); }
+/* Guide : la fenêtre s'ouvre comme un masque depuis sa ligne centrale, puis un cadre en traits fins se dessine */
+.guide-dialog[open] { animation: gMaskIn .7s cubic-bezier(.76, 0, .24, 1) both; }
+@keyframes gMaskIn {
+  from { clip-path: inset(50% 0 50% 0 round 28px); transform: scale(.96); }
+  to { clip-path: inset(0 0 0 0 round 28px); transform: none; }
+}
+.g-lines { position: absolute; inset: 12px; z-index: 3; pointer-events: none; }
+.g-lines span { position: absolute; background: color-mix(in srgb, var(--c-violet) 45%, transparent); }
+.g-lines .gl-t, .g-lines .gl-b { left: 0; right: 0; height: 1px; transform: scaleX(0); animation: gLineX .6s .35s cubic-bezier(.76, 0, .24, 1) forwards; }
+.g-lines .gl-r, .g-lines .gl-l { top: 0; bottom: 0; width: 1px; transform: scaleY(0); animation: gLineY .6s .35s cubic-bezier(.76, 0, .24, 1) forwards; }
+.g-lines .gl-t { top: 0; transform-origin: 0 50%; }
+.g-lines .gl-r { right: 0; transform-origin: 50% 0; }
+.g-lines .gl-b { bottom: 0; transform-origin: 100% 50%; }
+.g-lines .gl-l { left: 0; transform-origin: 50% 100%; }
+@keyframes gLineX { to { transform: scaleX(1); } }
+@keyframes gLineY { to { transform: scaleY(1); } }
 .combo-list:not([hidden]) { animation: dropIn .22s var(--ease-out); transform-origin: 50% 0; }
 @keyframes dropIn { from { opacity: 0; transform: translateY(-6px) scaleY(.92); } to { opacity: 1; transform: none; } }
 .limit-block, .paste-box { animation: popIn .3s var(--ease-out); }
@@ -142,10 +157,15 @@ dialog[open]::backdrop { animation: fadeIn .25s ease-out; }
 @keyframes fxGift { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.25) rotate(10deg); } 100% { transform: none; } }
 
 /* Tutoriel du guide (texte de droite) */
-.g-replay .g-kicker, .g-replay .g-title, .g-replay .g-intro { animation: gTextIn .5s var(--ease-out) both; }
-.g-replay .g-title { animation: gTextIn .5s .05s var(--ease-out) both, gradSlide 7s linear infinite; }
-.g-replay .g-intro { animation-delay: .1s; }
-.g-replay .g-list li { animation: gTextIn .5s var(--ease-out) both; animation-delay: calc(.15s + var(--i) * .07s); }
+/* le titre monte hors d'un masque, le reste arrive en fondu, ligne après ligne (75 ms d'écart) */
+.g-replay .g-kicker { animation: gFadeUp .5s .3s cubic-bezier(.13, .46, .15, .92) both; }
+.g-replay .g-title { animation: gMaskUp .75s .32s cubic-bezier(.13, .46, .15, .92) both, gradSlide 7s linear infinite; }
+.g-replay .g-intro { animation: gFadeUp .6s .48s cubic-bezier(.41, .19, .13, .95) both; }
+.g-replay .g-list li { animation: gFadeUp .6s cubic-bezier(.41, .19, .13, .95) both; animation-delay: calc(.56s + var(--i) * 75ms); }
+.g-replay .g-nav { animation: gFadeUp .5s .95s cubic-bezier(.41, .19, .13, .95) both; }
+/* le texte part d'une ligne plus bas et n'est visible qu'au-dessus de sa ligne d'origine (effet de masque) */
+@keyframes gMaskUp { from { transform: translateY(100%); clip-path: inset(0 0 100% 0); } to { transform: none; clip-path: inset(0 0 0 0); } }
+@keyframes gFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes gTextIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
 @keyframes gSpinY { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
 @keyframes gSpinFast { from { transform: rotateY(-720deg) scale(.6); } to { transform: rotateY(0) scale(1); } }
@@ -280,65 +300,118 @@ dialog[open]::backdrop { animation: fadeIn .25s ease-out; }
 @keyframes fxThemeReveal { from { clip-path: circle(0 at var(--vt-x, 100%) var(--vt-y, 0)); } to { clip-path: circle(150vmax at var(--vt-x, 100%) var(--vt-y, 0)); } }
 
 /* ==========================================================
-   Transition entre les pages : 4 bandes de couleur en biais + rideau final avec le logo
-   (couverture ≈ 0,52 s, dévoilement ≈ 0,62 s : durées attendues par js/app.js)
+   Transition entre les pages — « rideau et cadre »
+   Couverture (≈ 0,56 s) : un rideau nuit se referme en rectangle vers le centre, un cadre en traits fins
+   se dessine et le nom de la page monte hors d'un masque.
+   Dévoilement (≈ 0,72 s) : le nom repart vers le haut, le rideau s'ouvre depuis le centre en passant par le cadre,
+   pendant que les blocs de la nouvelle page arrivent en cascade (.page-enter, plus haut).
+   Durées attendues par js/app.js : COVER_MS, REVEAL_MS, INTRO_MS.
    ========================================================== */
-.pt { position: fixed; inset: 0; z-index: 400; pointer-events: none; visibility: hidden; overflow: hidden; }
+.pt {
+  position: fixed; inset: 0; z-index: 400; pointer-events: none; visibility: hidden; overflow: hidden;
+  --ft: 15%; --fl: 9%; /* marges du cadre : haut / bas, gauche / droite */
+  --ease-mask: cubic-bezier(.76, 0, .24, 1);
+  --ease-reveal: cubic-bezier(.13, .46, .15, .92);
+}
+@media (max-width: 760px) { .pt { --ft: 20%; --fl: 6%; } }
 .pt.is-active { visibility: visible; pointer-events: auto; } /* bloque les clics pendant la transition */
-.pt-band {
-  /* assez large pour couvrir l'écran malgré l'inclinaison, même sur un téléphone en hauteur */
-  position: absolute; top: -20%; bottom: -20%; left: -35vh; width: calc(100vw + 70vh);
-  transform: translateX(-110%) skewX(-14deg); will-change: transform;
+
+/* Rideau : un polygone « troué » (règle evenodd) ; le trou rectangulaire grandit ou rétrécit depuis le centre */
+.pt-curtain {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, #1E1146 0%, #0B0722 60%, #05030F 100%);
+  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%);
 }
-.pt-band-1 { background: linear-gradient(90deg, #B3128A, #FF3DB8); }
-.pt-band-2 { background: linear-gradient(90deg, #5B22D6, #9B6BFF); }
-.pt-band-3 { background: linear-gradient(90deg, #0A8FB8, #2FE0F0); }
-.pt-band-4 { background: linear-gradient(90deg, #FF7A1A, #FFC93C); }
-.pt-band-5 { background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #F6EEFF 45%, #E6DCFA 100%); } /* comme le fond d'origine du logo */
-:root[data-theme="dark"] .pt-band-5 { background: radial-gradient(circle at 50% 42%, #3A2080 0%, #1C1042 45%, #0B0722 100%); }
-:root[data-theme="dark"] .pt-logo { filter: drop-shadow(0 0 1px rgba(255, 255, 255, .7)) drop-shadow(0 0 24px rgba(255, 255, 255, .24)) drop-shadow(0 8px 34px rgba(255, 184, 28, .35)); }
+@keyframes ptClose {
+  from { clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, -5% -5%, 105% -5%, 105% 105%, -5% 105%, -5% -5%); }
+  to { clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%); }
+}
+@keyframes ptOpen {
+  0% {
+    clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%);
+    animation-timing-function: cubic-bezier(.3, 0, .2, 1);
+  }
+  42% { /* le trou atteint le cadre… */
+    clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, var(--fl) var(--ft), calc(100% - var(--fl)) var(--ft), calc(100% - var(--fl)) calc(100% - var(--ft)), var(--fl) calc(100% - var(--ft)), var(--fl) var(--ft));
+    animation-timing-function: cubic-bezier(.6, 0, .3, 1);
+  }
+  100% { /* …puis s'ouvre en grand */
+    clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, -5% -5%, 105% -5%, 105% 105%, -5% 105%, -5% -5%);
+  }
+}
 
-@keyframes ptIn { from { transform: translateX(-110%) skewX(-14deg); } to { transform: translateX(0) skewX(-14deg); } }
-@keyframes ptOut { from { transform: translateX(0) skewX(-14deg); } to { transform: translateX(110%) skewX(-14deg); } }
-.pt.is-cover .pt-band { animation: ptIn .38s cubic-bezier(.7, 0, .3, 1) both; }
-.pt.is-cover .pt-band-2 { animation-delay: .035s; }
-.pt.is-cover .pt-band-3 { animation-delay: .07s; }
-.pt.is-cover .pt-band-4 { animation-delay: .105s; }
-.pt.is-cover .pt-band-5 { animation-delay: .14s; }
-.pt.is-covered .pt-band { transform: translateX(0) skewX(-14deg); }
-.pt.is-reveal .pt-band { animation: ptOut .45s cubic-bezier(.7, 0, .3, 1) both; }
-.pt.is-reveal .pt-band-5 { animation-delay: 0s; }
-.pt.is-reveal .pt-band-4 { animation-delay: .04s; }
-.pt.is-reveal .pt-band-3 { animation-delay: .08s; }
-.pt.is-reveal .pt-band-2 { animation-delay: .12s; }
-.pt.is-reveal .pt-band-1 { animation-delay: .16s; }
+/* Cadre : quatre traits qui se dessinent en partant chacun d'un coin, plus quatre repères de couleur */
+.pt-frame { position: absolute; top: var(--ft); bottom: var(--ft); left: var(--fl); right: var(--fl); }
+.pt-l { position: absolute; background: rgba(255, 255, 255, .72); }
+.pt-l-t, .pt-l-b { left: 0; right: 0; height: 1px; transform: scaleX(0); }
+.pt-l-r, .pt-l-l { top: 0; bottom: 0; width: 1px; transform: scaleY(0); }
+.pt-l-t { top: 0; transform-origin: 0 50%; }
+.pt-l-r { right: 0; transform-origin: 50% 0; }
+.pt-l-b { bottom: 0; transform-origin: 100% 50%; }
+.pt-l-l { left: 0; transform-origin: 50% 100%; }
+@keyframes ptLineX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ptLineY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.pt-c { position: absolute; width: 7px; height: 7px; margin: -3px; transform: scale(0); }
+.pt-c-1 { left: 0; top: 0; background: var(--c-magenta, #FF2BD6); }
+.pt-c-2 { right: 0; top: 0; background: var(--c-cyan, #00F0FF); }
+.pt-c-3 { right: 0; bottom: 0; background: var(--c-gold, #FFB81C); }
+.pt-c-4 { left: 0; bottom: 0; background: var(--c-lime, #B4FF00); }
+@keyframes ptCorner { 0% { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.5) rotate(10deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes ptFrameOut { from { transform: none; opacity: 1; } to { transform: scale(1.14); opacity: 0; } }
 
-/* Logo et nom de la page au centre, sur un halo arc-en-ciel qui tourne */
+/* Nom de la page : grand titre qui monte hors d'un masque ; petit logo et sous-titre en fondu */
 .pt-label {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; color: #2A1A40; text-align: center; padding: 24px; opacity: 0;
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 0 calc(var(--fl) + 20px); color: #fff; text-align: center;
 }
-.pt-label::before {
-  content: ""; position: absolute; inset: 0; margin: auto; width: min(64vh, 86vw); height: min(64vh, 86vw); border-radius: 50%; z-index: -1;
-  background: conic-gradient(var(--c-magenta), var(--c-violet), var(--c-cyan), var(--c-lime), var(--c-gold), var(--c-coral), var(--c-magenta));
-  filter: blur(60px); opacity: .32; animation: spin 5s linear infinite;
+.pt-kicker {
+  display: inline-flex; align-items: center; gap: 10px; opacity: 0;
+  font-size: 12px; font-weight: 800; letter-spacing: .34em; text-transform: uppercase; color: rgba(255, 255, 255, .72);
 }
-.pt-logo { width: clamp(150px, 28vh, 280px); height: auto; filter: drop-shadow(0 10px 30px rgba(160, 34, 143, .3)); }
-.pt-line { width: 0; height: 5px; border-radius: 5px; background: var(--grad-rainbow) 0 0 / 200% 100%; animation: gradSlide 2s linear infinite; }
-.pt-page { font-size: clamp(15px, 2.2vw, 20px); font-weight: 900; color: #5B3A78; letter-spacing: .06em; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-:root[data-theme="dark"] .pt-page { color: #E4D9FF; }
-@keyframes ptLogo { 0% { opacity: 0; transform: scale(.6) rotate(-10deg); } 70% { opacity: 1; transform: scale(1.06) rotate(2deg); } 100% { opacity: 1; transform: none; } }
-@keyframes ptLine { from { width: 0; } to { width: min(240px, 52vw); } }
-@keyframes ptFadeOut { from { opacity: 1; } to { opacity: 0; transform: scale(1.06); } }
-.pt.is-cover .pt-label { animation: fadeIn .2s .3s both; }
-.pt.is-cover .pt-logo { animation: ptLogo .45s .28s var(--ease-out) both; }
-.pt.is-cover .pt-line { animation: ptLine .35s .36s var(--ease-out) both, gradSlide 2s linear infinite; }
-.pt.is-covered .pt-label { opacity: 1; }
-.pt.is-covered .pt-logo { animation: ptLogo .7s .1s var(--ease-spring) both; }
-.pt.is-covered .pt-line { animation: ptLine .5s .25s var(--ease-out) both, gradSlide 2s linear infinite; }
-.pt.is-covered .pt-page { animation: fadeIn .4s .35s both; }
-.pt.is-reveal .pt-label { opacity: 1; animation: ptFadeOut .22s ease-in both; }
-.pt.is-reveal .pt-line { width: min(240px, 52vw); }
+.pt-kicker img { display: block; height: 26px; width: auto; }
+.pt-mask { display: block; max-width: 100%; overflow: hidden; padding: .04em .12em .14em; }
+.pt-page {
+  display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transform: translateY(115%);
+  font-size: clamp(34px, 7.2vw, 92px); font-weight: 900; line-height: 1.04; letter-spacing: -.035em;
+  background: linear-gradient(100deg, #fff 0%, #fff 38%, #FFE27A 52%, #FF8AD8 66%, #8EF3FF 80%, #fff 94%) 0 0 / 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.pt-sub { font-size: 14px; font-weight: 600; letter-spacing: .04em; color: rgba(255, 255, 255, .62); opacity: 0; }
+.pt-sub:empty { display: none; }
+@media (max-width: 760px) { /* sur téléphone, un nom long passe sur deux lignes au lieu d'être coupé */
+  .pt-page { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: clamp(30px, 9.5vw, 46px); line-height: 1.08; }
+}
+.pt.is-intro .pt-kicker { display: none; } /* à l'ouverture, le titre est déjà « NexCup » */
+@keyframes ptTitleIn { from { transform: translateY(115%); } to { transform: translateY(0); } }
+@keyframes ptTitleOut { from { transform: translateY(0); } to { transform: translateY(-115%); } }
+@keyframes ptShimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes ptFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes ptFadeOutUp { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-10px); } }
+
+/* — Couverture — */
+.pt.is-cover .pt-curtain { animation: ptClose .46s var(--ease-mask) both; }
+.pt.is-cover .pt-l-t, .pt.is-cover .pt-l-b { animation: ptLineX .5s .14s var(--ease-mask) both; }
+.pt.is-cover .pt-l-r, .pt.is-cover .pt-l-l { animation: ptLineY .5s .14s var(--ease-mask) both; }
+.pt.is-cover .pt-c { animation: ptCorner .4s .4s var(--ease-spring) both; }
+.pt.is-cover .pt-kicker { animation: ptFadeUp .4s .2s var(--ease-reveal) both; }
+.pt.is-cover .pt-page { animation: ptTitleIn .55s .22s var(--ease-reveal) both, ptShimmer 1.2s .3s ease-out both; }
+.pt.is-cover .pt-sub { animation: ptFadeUp .4s .32s var(--ease-reveal) both; }
+
+/* — Écran d'ouverture (rideau déjà fermé) : le cadre se dessine plus lentement — */
+.pt.is-covered .pt-l-t, .pt.is-covered .pt-l-b { animation: ptLineX .85s .05s var(--ease-mask) both; }
+.pt.is-covered .pt-l-r, .pt.is-covered .pt-l-l { animation: ptLineY .85s .05s var(--ease-mask) both; }
+.pt.is-covered .pt-c { animation: ptCorner .45s .7s var(--ease-spring) both; }
+.pt.is-covered .pt-kicker { animation: ptFadeUp .5s .15s var(--ease-reveal) both; }
+.pt.is-covered .pt-page { animation: ptTitleIn .75s .3s var(--ease-reveal) both, ptShimmer 1.4s .4s ease-out both; }
+.pt.is-covered .pt-sub { animation: ptFadeUp .5s .55s var(--ease-reveal) both; }
+
+/* — Dévoilement — */
+.pt.is-reveal .pt-curtain { animation: ptOpen .62s .1s both; }
+.pt.is-reveal .pt-l { transform: none; }
+.pt.is-reveal .pt-c { transform: none; }
+.pt.is-reveal .pt-frame { animation: ptFrameOut .55s .12s var(--ease-mask) both; }
+.pt.is-reveal .pt-page { transform: none; animation: ptTitleOut .34s var(--ease-mask) both; }
+.pt.is-reveal .pt-kicker, .pt.is-reveal .pt-sub { opacity: 1; animation: ptFadeOutUp .26s ease-in both; }
 
 /* ==========================================================
    Accessibilité : pas d'animation si l'utilisateur les a désactivées dans son système

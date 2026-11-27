@@ -124,7 +124,8 @@ const Guide = (() => {
         <div class="g-shadow"></div>
         <div class="g-num"></div>
       </div>
-      <div class="g-text"></div>`;
+      <div class="g-text"></div>
+      <div class="g-lines" aria-hidden="true"><span class="gl-t"></span><span class="gl-r"></span><span class="gl-b"></span><span class="gl-l"></span></div>`;
     document.body.appendChild(dlg);
     dlg.addEventListener('click', (e) => {
       if (e.target === dlg) return dlg.close(); // clic sur le fond
@@ -156,6 +157,7 @@ const Guide = (() => {
   const SCENES = ['create', 'score', 'rank'];
   let cine = null;
   let cineTimers = [];
+  let cineOutTimer = 0;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const TROPHY = '<img class="x-trophy-img" src="assets/logo/nexcup-trophy.png" alt="" width="440" height="411">';
   const GOLD = ['#FFE27A', '#FFC93C', '#FFB81C', '#FFFFFF'];
@@ -303,7 +305,9 @@ const Guide = (() => {
     cine = document.createElement('div');
     cine.className = 'cine';
     cine.setAttribute('aria-hidden', 'true');
-    cine.innerHTML = sceneCreate() + sceneScore() + sceneRank();
+    // cadre en traits fins dessiné à l'ouverture (voir .cine-frame dans scenes.css)
+    const frame = '<div class="cine-frame"><span class="cf-t"></span><span class="cf-r"></span><span class="cf-b"></span><span class="cf-l"></span></div>';
+    cine.innerHTML = frame + sceneCreate() + sceneScore() + sceneRank();
     cine.dataset.portrait = isPortrait();
     document.body.appendChild(cine);
   }
@@ -330,7 +334,7 @@ const Guide = (() => {
       document.removeEventListener('keydown', onKey, true);
       cine.removeEventListener('click', finish);
       cine.classList.add('is-out');
-      setTimeout(() => cine.classList.remove('is-playing', 'is-out'), 350);
+      cineOutTimer = setTimeout(() => cine.classList.remove('is-playing', 'is-out'), 440); // fermeture vers le centre (.42 s)
       done();
     };
     const onKey = (e) => {
@@ -339,6 +343,7 @@ const Guide = (() => {
         finish();
       }
     };
+    clearTimeout(cineOutTimer); // une fermeture encore en cours ne doit pas couper la nouvelle scène
     cine.classList.remove('is-playing', 'is-out');
     void cine.offsetWidth; // relance toutes les animations
     cine.classList.add('is-playing');

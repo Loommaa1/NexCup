@@ -2330,13 +2330,16 @@
   /* ---------------- Démarrage ---------------- */
 
   /* ---------------- Transition entre les pages ----------------
-     Des bandes en biais balaient l'écran, le nom de la page s'affiche au centre,
-     la nouvelle page est dessinée pendant qu'elles couvrent l'écran, puis elles repartent. */
+     Un rideau nuit se referme en rectangle vers le centre, un cadre en traits fins se dessine et le nom
+     de la page monte hors d'un masque ; la nouvelle page est dessinée pendant que l'écran est couvert,
+     puis le rideau s'ouvre depuis le centre et les blocs de la page arrivent en cascade. */
   const pt = document.getElementById('pageTransition');
   const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const COVER_MS = 520; // temps pour couvrir l'écran
-  const REVEAL_MS = 620; // temps pour le dévoiler
+  const COVER_MS = 560; // temps pour couvrir l'écran
+  const REVEAL_MS = 720; // temps pour le dévoiler
+  const INTRO_MS = 1250; // écran d'ouverture (cadre dessiné, nom affiché) avant le dévoilement
   let ptTimers = [];
+  // (l'arrivée en cascade des blocs de la nouvelle page est faite par la classe .page-enter, voir motion.css)
 
   function pageLabel() {
     const [view, id] = location.hash.replace(/^#\/?/, '').split('/');
@@ -2350,6 +2353,7 @@
     if (!pt || reducedMotion()) return run();
     ptTimers.forEach(clearTimeout); // clics rapides : on repart proprement
     pt.querySelector('.pt-page').textContent = pageLabel();
+    pt.querySelector('.pt-sub').textContent = '';
     pt.className = 'pt is-active is-cover';
     ptTimers = [
       setTimeout(() => {
@@ -2360,15 +2364,16 @@
     ];
   }
 
-  // Écran d'ouverture : l'écran démarre couvert (logo NexCup), puis se dévoile
+  // Écran d'ouverture : l'écran démarre couvert (rideau fermé), le cadre se dessine, puis tout se dévoile
   function playIntro() {
     if (!pt) return;
     if (reducedMotion()) return (pt.className = 'pt'); // pas d'animation : on découvre tout de suite
-    pt.querySelector('.pt-page').textContent = 'Tournois sport & e-sport';
+    pt.querySelector('.pt-page').textContent = 'NexCup';
+    pt.querySelector('.pt-sub').textContent = 'Tournois sport & e-sport';
     pt.className = 'pt is-active is-covered is-intro';
     ptTimers = [
-      setTimeout(() => (pt.className = 'pt is-active is-reveal is-intro'), 750),
-      setTimeout(() => (pt.className = 'pt'), 750 + REVEAL_MS),
+      setTimeout(() => (pt.className = 'pt is-active is-reveal is-intro'), INTRO_MS),
+      setTimeout(() => (pt.className = 'pt'), INTRO_MS + REVEAL_MS),
     ];
   }
 

@@ -9,9 +9,32 @@
              2,7 s = 60 % · 3,15 s = 70 % · 3,6 s = 80 % · 4,05 s = 90 %
    ========================================================== */
 .cine { position: fixed; inset: 0; z-index: 450; overflow: hidden; display: none; cursor: pointer; background: #07041A; }
-.cine.is-playing { display: block; }
-.cine.is-out { opacity: 0; transition: opacity .3s ease-out; }
 .cine * { animation-duration: 4.5s; animation-fill-mode: both; }
+/* Ouverture et fermeture façon « rideau et cadre » (comme la transition entre les pages) :
+   la scène apparaît dans un rectangle qui grandit depuis le centre en passant par un cadre en traits fins,
+   et se referme vers le centre à la fin. */
+.cine { --cf-t: 15%; --cf-l: 9%; }
+@media (max-width: 760px) { .cine { --cf-t: 20%; --cf-l: 6%; } }
+.cine.is-playing { display: block; animation: cineOpen .8s both; }
+.cine.is-out { animation: cineClose .42s cubic-bezier(.76, 0, .24, 1) forwards; }
+@keyframes cineOpen {
+  0% { clip-path: inset(50% 50% 50% 50%); animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  40% { clip-path: inset(var(--cf-t) var(--cf-l) var(--cf-t) var(--cf-l)); animation-timing-function: cubic-bezier(.6, 0, .3, 1); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+@keyframes cineClose { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(50% 50% 50% 50%); } }
+.cine-frame { position: absolute; z-index: 5; top: var(--cf-t); bottom: var(--cf-t); left: var(--cf-l); right: var(--cf-l); pointer-events: none;
+  animation: cineFrame .8s cubic-bezier(.76, 0, .24, 1) both; }
+.cine-frame span { position: absolute; background: rgba(255, 255, 255, .8); }
+.cine-frame .cf-t, .cine-frame .cf-b { left: 0; right: 0; height: 1px; animation: cfX .38s cubic-bezier(.76, 0, .24, 1) both; }
+.cine-frame .cf-r, .cine-frame .cf-l { top: 0; bottom: 0; width: 1px; animation: cfY .38s cubic-bezier(.76, 0, .24, 1) both; }
+.cine-frame .cf-t { top: 0; transform-origin: 0 50%; }
+.cine-frame .cf-r { right: 0; transform-origin: 50% 0; }
+.cine-frame .cf-b { bottom: 0; transform-origin: 100% 50%; }
+.cine-frame .cf-l { left: 0; transform-origin: 50% 100%; }
+@keyframes cfX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes cfY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes cineFrame { 0%, 38% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.16); } }
 .cine .scene { position: absolute; inset: 0; overflow: hidden; display: none; }
 .cine[data-scene="create"] .scene-create,
 .cine[data-scene="score"] .scene-score,
